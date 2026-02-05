@@ -57,7 +57,7 @@ class TestConvertVesperiaSave(TestCase):
                 output=self.test_filepath / "SAVE.convert",
                 game_name="vesperia",
                 convert_format=ConvertFormat(SaveFormat.PS3, SaveFormat.PC),
-                patch_dlc_item_checks=False
+                patch_dlc_item_checks=False,
             )
             # Convert from PS3 to PC save
 

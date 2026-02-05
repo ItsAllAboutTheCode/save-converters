@@ -13,7 +13,10 @@ import tempfile
 import shutil
 import sys
 from typing import Any, cast, override
-from save_convert.vesperia_title_id_list import VESPERIA_PC_TITLE_IDS, VESPERIA_PS3_TITLE_IDS
+from save_convert.vesperia_title_id_list import (
+    VESPERIA_PC_TITLE_IDS,
+    VESPERIA_PS3_TITLE_IDS,
+)
 
 from save_convert.save_convert_base import (
     ConvertFormat,
@@ -39,8 +42,12 @@ logger.addHandler(stdoutHandler)
 
 VESPERIA_PS3_TO_PC_FORMAT = ConvertFormat(SaveFormat.PS3, SaveFormat.PC)
 VESPERIA_PC_TO_PS3_FORMAT = ConvertFormat(SaveFormat.PC, SaveFormat.PS3)
-VESPERIA_PS3_SAVE_SIZE = 552 + 838304  # 552 byte save header + 838204 byte save data block
-VESPERIA_PC_SAVE_SIZE = VESPERIA_PS3_SAVE_SIZE + 16  # The PC Save block is 16 bytes larget than PS3
+VESPERIA_PS3_SAVE_SIZE = (
+    552 + 838304
+)  # 552 byte save header + 838204 byte save data block
+VESPERIA_PC_SAVE_SIZE = (
+    VESPERIA_PS3_SAVE_SIZE + 16
+)  # The PC Save block is 16 bytes larget than PS3
 
 
 # Stores the range offset of all the custom character name offsets in the PS3 save file
@@ -54,7 +61,9 @@ VESPERIA_CUSTOM_CHARACTER_NAME_BUFFER_SIZE = 64
 VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET_RANGES = (
     ReplaceMap(
         source_range=Range(
-            VESPERIA_FIRST_PC_OFFSET_PS3 + index * VESPERIA_PC_BLOCK_SIZE + VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET,
+            VESPERIA_FIRST_PC_OFFSET_PS3
+            + index * VESPERIA_PC_BLOCK_SIZE
+            + VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET,
             VESPERIA_FIRST_PC_OFFSET_PS3
             + index * VESPERIA_PC_BLOCK_SIZE
             + VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET
@@ -66,9 +75,7 @@ VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET_RANGES = (
 )
 
 ## Title Section
-VESPERIA_TITLE_BITFIELD_OFFSET = (
-    0x3C90  # 15504 bytes into the PC character data for character 1 which would be 0xAC5B8 (PS3) 0xAC5C8 (PC)
-)
+VESPERIA_TITLE_BITFIELD_OFFSET = 0x3C90  # 15504 bytes into the PC character data for character 1 which would be 0xAC5B8 (PS3) 0xAC5C8 (PC)
 VESPERIA_TITLE_BITFIELD_SIZE = 4 * 15  # There are 15 32-bit ints for title data
 # https://github.com/AdmiralCurtiss/HyoutaTools/blob/33f1e42a6efc5c386c654656c2b21991d58fdedb/HyoutaToolsLib/Tales/Vesperia/SaveData/SaveDataBlockPCStatus.cs#L87
 
@@ -95,7 +102,9 @@ def patch_obtained_titles(
 ) -> ReplaceResult:
     # The offset must exactly match the beginning of the range to discover the all the titles
     if offset != source_range.start:
-        return ReplaceResult(data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip)
+        return ReplaceResult(
+            data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip
+        )
 
     TITLE_PACK_STRIDE = 4  # 32-bits per title bitfield
     TITLE_PACK_BITS = TITLE_PACK_STRIDE * 8
@@ -104,14 +113,20 @@ def patch_obtained_titles(
     for title_bitfield_offset in range(offset, source_range.end, TITLE_PACK_STRIDE):
         # The Title list also needs to be endian swapped as well
         title_bitfield = int.from_bytes(
-            bytes=input_data[title_bitfield_offset : title_bitfield_offset + TITLE_PACK_STRIDE],
+            bytes=input_data[
+                title_bitfield_offset : title_bitfield_offset + TITLE_PACK_STRIDE
+            ],
             byteorder="big" if convert_format.source == SaveFormat.PS3 else "little",
         )
         for title_bit in range(TITLE_PACK_BITS):
             if (title_bitfield >> title_bit) & 1:
                 obtained_titles.add((title_bitfield_offset - offset) * 8 + title_bit)
 
-    platform_title_list = VESPERIA_PS3_TITLE_IDS if convert_format.target == SaveFormat.PS3 else VESPERIA_PC_TITLE_IDS
+    platform_title_list = (
+        VESPERIA_PS3_TITLE_IDS
+        if convert_format.target == SaveFormat.PS3
+        else VESPERIA_PC_TITLE_IDS
+    )
     invalid_titles: set[int] = set()
     for title in obtained_titles:
         title_name: str | None = platform_title_list.get(title)
@@ -120,13 +135,17 @@ def patch_obtained_titles(
             invalid_titles.add(title)
 
     if invalid_titles:
-        char_index = (offset - VESPERIA_FIRST_PC_OFFSET_PS3 - VESPERIA_TITLE_BITFIELD_OFFSET) // VESPERIA_PC_BLOCK_SIZE
+        char_index = (
+            offset - VESPERIA_FIRST_PC_OFFSET_PS3 - VESPERIA_TITLE_BITFIELD_OFFSET
+        ) // VESPERIA_PC_BLOCK_SIZE
         logger.info(
             f"Character {char_index} has invalid titles obtained at bits: {invalid_titles} from offset 0x{offset:X}\n"
             + "Invalid titles will set to 0 (not obtained)"
         )
 
-    output_title_array: list[int] = [0] * (VESPERIA_TITLE_BITFIELD_SIZE // TITLE_PACK_STRIDE)
+    output_title_array: list[int] = [0] * (
+        VESPERIA_TITLE_BITFIELD_SIZE // TITLE_PACK_STRIDE
+    )
     valid_titles = obtained_titles - invalid_titles
     for title in valid_titles:
         output_title_array[title // TITLE_PACK_BITS] |= 1 << title % TITLE_PACK_BITS
@@ -134,13 +153,19 @@ def patch_obtained_titles(
     # Pack the title: int[15] array into bytes taking into account the endianess of the output format
     struct_format = f"{'<' if convert_format.target != SaveFormat.PS3 else '>'}{len(output_title_array)}I"
     output_data = struct.pack(struct_format, *output_title_array)
-    return ReplaceResult(data=output_data, new_offset=source_range.end, replace_complete=ReplaceState.Complete)
+    return ReplaceResult(
+        data=output_data,
+        new_offset=source_range.end,
+        replace_complete=ReplaceState.Complete,
+    )
 
 
 VESPERIA_CHARACTER_OBTAINED_TITLE_OFFSET_RANGES = (
     ReplaceMap(
         source_range=Range(
-            VESPERIA_FIRST_PC_OFFSET_PS3 + index * VESPERIA_PC_BLOCK_SIZE + VESPERIA_TITLE_BITFIELD_OFFSET,
+            VESPERIA_FIRST_PC_OFFSET_PS3
+            + index * VESPERIA_PC_BLOCK_SIZE
+            + VESPERIA_TITLE_BITFIELD_OFFSET,
             VESPERIA_FIRST_PC_OFFSET_PS3
             + index * VESPERIA_PC_BLOCK_SIZE
             + VESPERIA_TITLE_BITFIELD_OFFSET
@@ -171,7 +196,9 @@ VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET = 0x10
 # plus the fact that these types of fields tend to be 16 byte aligned, the stride of this check offset will be assumed to be 64 bytes(16 int sized bitfields)
 
 VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET = 0xA7E00
-VESPERIA_PC_DLC_ITEM_CHECK_OFFSET = VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET
+VESPERIA_PC_DLC_ITEM_CHECK_OFFSET = (
+    VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET
+)
 VESPERIA_DLC_ITEM_CHECK_STRIDE = 64
 
 
@@ -363,7 +390,9 @@ REPLACE_OFFSET_TABLE: dict[ConvertFormat, list[ReplaceMap]] = {
             replace_func=get_replace_range_bytes(bytes([0x0] * 16)),
         ),
         # SavePoint data should not be endian swapped
-        ReplaceMap(source_range=Range(0x3AC8, 0x3AC8 + 1024), replace_func=replace_copy),
+        ReplaceMap(
+            source_range=Range(0x3AC8, 0x3AC8 + 1024), replace_func=replace_copy
+        ),
         # Custom Battle Strategy names are strings
         ReplaceMap(
             source_range=Range(0xA7160, 0xA7160 + 0x40 * 8),
@@ -486,14 +515,16 @@ REPLACE_OFFSET_TABLE: dict[ConvertFormat, list[ReplaceMap]] = {
         ),
         *[
             ReplaceMap(
-                source_range=char_name_replace_entry.source_range + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
+                source_range=char_name_replace_entry.source_range
+                + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
                 replace_func=char_name_replace_entry.replace_func,
             )
             for char_name_replace_entry in VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET_RANGES
         ],
         *[
             ReplaceMap(
-                source_range=char_name_replace_entry.source_range + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
+                source_range=char_name_replace_entry.source_range
+                + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
                 replace_func=char_name_replace_entry.replace_func,
             )
             for char_name_replace_entry in VESPERIA_CHARACTER_OBTAINED_TITLE_OFFSET_RANGES
@@ -509,7 +540,9 @@ REPLACE_OFFSET_TABLE: dict[ConvertFormat, list[ReplaceMap]] = {
 }
 
 
-def create_replace_offset_dict(convert_format: ConvertFormat, patch_dlc_item_checks: bool) -> list[ReplaceMap]:
+def create_replace_offset_dict(
+    convert_format: ConvertFormat, patch_dlc_item_checks: bool
+) -> list[ReplaceMap]:
     """
     Returns a dictionary of offset -> byte array entries that indicates which
     actions should be performed when an address is encountered from the input save
@@ -533,22 +566,36 @@ def create_replace_offset_dict(convert_format: ConvertFormat, patch_dlc_item_che
         bisect.insort(
             game_replace_table,
             ReplaceMap(
-                source_range=Range(dlc_check_start, dlc_check_start + VESPERIA_DLC_ITEM_CHECK_STRIDE),
-                replace_func=get_replace_range_bytes(bytes(VESPERIA_DLC_ITEM_CHECK_STRIDE)),
+                source_range=Range(
+                    dlc_check_start, dlc_check_start + VESPERIA_DLC_ITEM_CHECK_STRIDE
+                ),
+                replace_func=get_replace_range_bytes(
+                    bytes(VESPERIA_DLC_ITEM_CHECK_STRIDE)
+                ),
             ),
         )
 
     # Now fill in any non-converted range gaps with the endian swap method to have endian swapping occur for the save
-    if convert_format.source == SaveFormat.PS3 and convert_format.target != SaveFormat.PS3:
+    if (
+        convert_format.source == SaveFormat.PS3
+        and convert_format.target != SaveFormat.PS3
+    ):
         game_replace_table = fill_replace_func_in_offset_range_gaps(
             game_replace_table,
-            fill_replace_func=get_replace_endian_swap(swap_size=EndianSwapSize.Size32Bit),
+            fill_replace_func=get_replace_endian_swap(
+                swap_size=EndianSwapSize.Size32Bit
+            ),
             max_offset=VESPERIA_PS3_SAVE_SIZE,
         )
-    elif convert_format.source != SaveFormat.PS3 and convert_format.target == SaveFormat.PS3:
+    elif (
+        convert_format.source != SaveFormat.PS3
+        and convert_format.target == SaveFormat.PS3
+    ):
         game_replace_table = fill_replace_func_in_offset_range_gaps(
             game_replace_table,
-            fill_replace_func=get_replace_endian_swap(swap_size=EndianSwapSize.Size32Bit),
+            fill_replace_func=get_replace_endian_swap(
+                swap_size=EndianSwapSize.Size32Bit
+            ),
             max_offset=VESPERIA_PC_SAVE_SIZE,
         )
 
@@ -572,7 +619,9 @@ def create_replace_offset_dict(convert_format: ConvertFormat, patch_dlc_item_che
     elif convert_format.source == SaveFormat.PC:
         input_save_size = VESPERIA_PC_SAVE_SIZE
     else:
-        raise ValueError(f"Source convert format {convert_format.source} does not have known save size. Aborting...")
+        raise ValueError(
+            f"Source convert format {convert_format.source} does not have known save size. Aborting..."
+        )
     if game_replace_table[-1].source_range.end < input_save_size:
         error_message += f"The last range entry end offset must be at least {input_save_size:x}. It is {game_replace_table[-1].source_range.end}\n"
 
@@ -619,7 +668,10 @@ def process_input_savedata(
             key=lambda entry: entry.source_range.start,
         )
 
-        if lower_bound != len(replace_set) and replace_set[lower_bound].source_range.start == offset:
+        if (
+            lower_bound != len(replace_set)
+            and replace_set[lower_bound].source_range.start == offset
+        ):
             # If the offset is exactly equal to the lower_bound start offset, use that entry
             replace_index = lower_bound
         elif lower_bound > 0:
@@ -629,10 +681,14 @@ def process_input_savedata(
 
     if replace_index != -1:
         source_range = replace_set[replace_index].source_range
-        output_result = replace_set[replace_index].replace_func(input_data, offset, source_range, convert_format)
+        output_result = replace_set[replace_index].replace_func(
+            input_data, offset, source_range, convert_format
+        )
         return output_result
 
-    return ReplaceResult(data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip)
+    return ReplaceResult(
+        data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip
+    )
 
 
 class SaveConvertVesperia(SaveConvertBase):
@@ -650,7 +706,9 @@ class SaveConvertVesperia(SaveConvertBase):
         self._patch_dlc_checks = cast(bool, args.patch_dlc_item_checks)
         output_path: pathlib.Path | None = args.output  # pyright: ignore[reportAny]
         if not output_path:
-            output_path = self._input_path.with_suffix(f"{self._input_path.suffix}.{self._convert_format.target}")
+            output_path = self._input_path.with_suffix(
+                f"{self._input_path.suffix}.{self._convert_format.target}"
+            )
             logger.info(f"No Output path specified, it has been set to {output_path}")
 
         self._output_path = output_path
@@ -665,7 +723,9 @@ class SaveConvertVesperia(SaveConvertBase):
             try:
                 self._input_data = infile.read()
             except BlockingIOError as err:
-                logger.error(f"Unable to read data from input file {self._input_path}: {err}")
+                logger.error(
+                    f"Unable to read data from input file {self._input_path}: {err}"
+                )
                 return False
 
         return True
@@ -677,16 +737,23 @@ class SaveConvertVesperia(SaveConvertBase):
         in order to convert the target save format
         """
 
-        self._output_io = BytesIO()  # Create a in-memory binary IO buffer for storing output data
+        self._output_io = (
+            BytesIO()
+        )  # Create a in-memory binary IO buffer for storing output data
         replace_set = create_replace_offset_dict(
-            convert_format=self._convert_format, patch_dlc_item_checks=self._patch_dlc_checks
+            convert_format=self._convert_format,
+            patch_dlc_item_checks=self._patch_dlc_checks,
         )
         replace_set_index = 0
 
         cur_offset = 0
         while cur_offset < len(self._input_data):
             result = process_input_savedata(
-                cur_offset, self._input_data, replace_set, replace_set_index, self._convert_format
+                cur_offset,
+                self._input_data,
+                replace_set,
+                replace_set_index,
+                self._convert_format,
             )
 
             try:
@@ -718,7 +785,9 @@ class SaveConvertVesperia(SaveConvertBase):
         """
         # Now copy temporary output file to destination
         with tempfile.TemporaryDirectory() as tmpdir:
-            tmp_output_path = pathlib.Path(f"{tmpdir}/{self._output_path.name}").resolve()
+            tmp_output_path = pathlib.Path(
+                f"{tmpdir}/{self._output_path.name}"
+            ).resolve()
             with tmp_output_path.open("wb") as outfile:
                 byte_buffer = self._output_io.getvalue()
                 assert outfile.write(byte_buffer) == len(byte_buffer)
@@ -768,7 +837,9 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
             elif values == "pc-to-ps3":
                 setattr(namespace, self.dest, VESPERIA_PC_TO_PS3_FORMAT)
             else:
-                raise ValueError(f"Value {values} is not an appropriate choice for argument {options_string}")
+                raise ValueError(
+                    f"Value {values} is not an appropriate choice for argument {options_string}"
+                )
 
     parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
         "--convert-format",
