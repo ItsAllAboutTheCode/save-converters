@@ -1,0 +1,12 @@
+# Python cache
+*.pyc
+
+# virtual environment folders
+venv
+.venv
+env
+.env
+
+# Code files
+.vscode
+*.code-workspace

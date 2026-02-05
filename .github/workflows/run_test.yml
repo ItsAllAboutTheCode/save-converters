@@ -1,0 +1,42 @@
+on: [push, pull_request]
+
+name: UnitTest
+jobs:
+  unittest-runner:
+    name: Mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Print current dir
+        run: pwd
+      - uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+      - name: Run python unittest
+        run: |
+          python -m unittest -t test/test_*.py
+
+  ruff-checker:
+    name: Ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff
+      - name: Check code style
+        run: |
+          ruff --version
+          ruff check .
+      - name: Check format
+        run: ruff format . --check
