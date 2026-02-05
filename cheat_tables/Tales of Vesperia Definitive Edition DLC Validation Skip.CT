@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Patch DLC Item Check"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : TOV_DE.exe
+  Version:
+  Date   : 2026-02-04
+  Author : SandwichSage
+
+  This script patches the memory where the DLC check occurs.
+  This allows the loaded file to bypass any DLC failures
+  Futhermore resaving the file has DLC item obtained flag set to 0.
+  Therefore afterwards the cheat no longer needs to be enabled
+}
+
+[ENABLE]
+
+aobscanmodule(patch_dlc_validation_aob,TOV_DE.exe,43 8B 8C 84 F4 3D 00 00) // should be unique
+alloc(newmem,$1000,patch_dlc_validation_aob)
+
+label(return)
+
+newmem:
+  push rcx
+  lea ecx,[r12+r8*4+00003DF4]
+  mov [ecx], 0
+  pop rcx
+  jmp return
+
+patch_dlc_validation_aob:
+  jmp newmem
+  nop 3
+return:
+registersymbol(patch_dlc_validation_aob)
+
+[DISABLE]
+
+patch_dlc_validation_aob:
+  db 43 8B 8C 84 F4 3D 00 00
+
+unregistersymbol(patch_dlc_validation_aob)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: TOV_DE.exe+5BC4F7
+
+TOV_DE.exe+5BC4D2: 8B D0                    - mov edx,eax
+TOV_DE.exe+5BC4D4: 48 8D 0D 75 29 AC 00     - lea rcx,[TOV_DE.exe+107EE50]
+TOV_DE.exe+5BC4DB: E8 00 23 FF FF           - call TOV_DE.exe+5AE7E0
+TOV_DE.exe+5BC4E0: 83 78 1C 0B              - cmp dword ptr [rax+1C],0B
+TOV_DE.exe+5BC4E4: 75 4C                    - jne TOV_DE.exe+5BC532
+TOV_DE.exe+5BC4E6: 45 8B C6                 - mov r8d,r14d
+TOV_DE.exe+5BC4E9: 41 0F B6 CE              - movzx ecx,r14b
+TOV_DE.exe+5BC4ED: 80 E1 1F                 - and cl,1F
+TOV_DE.exe+5BC4F0: 0F B6 D1                 - movzx edx,cl
+TOV_DE.exe+5BC4F3: 49 C1 E8 05              - shr r8,05
+// ---------- INJECTING HERE ----------
+TOV_DE.exe+5BC4F7: 43 8B 8C 84 F4 3D 00 00  - mov ecx,[r12+r8*4+00003DF4]
+// ---------- DONE INJECTING  ----------
+TOV_DE.exe+5BC4FF: 0F A3 D1                 - bt ecx,edx
+TOV_DE.exe+5BC502: 73 2E                    - jae TOV_DE.exe+5BC532
+TOV_DE.exe+5BC504: 33 C9                    - xor ecx,ecx
+TOV_DE.exe+5BC506: 48 8B D3                 - mov rdx,rbx
+TOV_DE.exe+5BC509: 48 2B D7                 - sub rdx,rdi
+TOV_DE.exe+5BC50C: 48 C1 FA 02              - sar rdx,02
+TOV_DE.exe+5BC510: 48 85 D2                 - test rdx,rdx
+TOV_DE.exe+5BC513: 74 11                    - je TOV_DE.exe+5BC526
+TOV_DE.exe+5BC515: 33 C0                    - xor eax,eax
+TOV_DE.exe+5BC517: 44 39 34 87              - cmp [rdi+rax*4],r14d
+}
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <LuaScript>PROCESS_NAME = 'TOV_DE.exe'
+AUTO_ACTIVE_SCRIPTS = {}
+table.insert(AUTO_ACTIVE_SCRIPTS, 'Patch DLC Item Check')
+--------
+-------- Auto Attach
+--------
+local autoAttachTimer = nil ---- variable to hold timer object
+local autoAttachTimerInterval = 1000 ---- Timer intervals are in milliseconds
+local autoAttachTimerTicks = 0 ---- variable to count number of times the timer has run
+local autoAttachTimerTickMax = 10000 ---- Set to zero to disable ticks max
+local function autoAttachTimer_tick(timer) ---- Timer tick call back
+    ---- Destroy timer if max ticks is reached
+    if autoAttachTimerTickMax &gt; 0 and autoAttachTimerTicks &gt;= autoAttachTimerTickMax then
+        timer.destroy()
+    end
+    ---- Check if process is running
+    if getProcessIDFromProcessName(PROCESS_NAME) ~= nil then
+        timer.destroy() ---- Destroy timer
+        openProcess(PROCESS_NAME) ---- Open the process
+        for i, script_name in ipairs(AUTO_ACTIVE_SCRIPTS) do
+            getAddressList().getMemoryRecordByDescription(script_name).Active = true
+        end
+    end
+    autoAttachTimerTicks = autoAttachTimerTicks + 1 ---- Increase ticks
+end
+autoAttachTimer = createTimer(getMainForm()) ---- Create timer with the main form as it's parent
+autoAttachTimer.Interval = autoAttachTimerInterval ---- Set timer interval
+autoAttachTimer.OnTimer = autoAttachTimer_tick ---- Set timer tick call back
+</LuaScript>
+</CheatTable>
