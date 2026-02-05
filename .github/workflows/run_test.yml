@@ -3,7 +3,7 @@ on: [push, pull_request]
 name: UnitTest
 jobs:
   unittest-runner:
-    name: Mypy
+    name: Run Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -19,7 +19,7 @@ jobs:
           python -m pip install --upgrade pip
       - name: Run python unittest
         run: |
-          python -m unittest -t test/test_*.py
+          python -m unittest test/test_*.py
 
   ruff-checker:
     name: Ruff
