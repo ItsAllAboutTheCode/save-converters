@@ -9,7 +9,7 @@ from save_convert.save_convert_base import (
     ConvertFormat,
     SaveFormat,
 )
-from save_convert.vesperia_save_converter import (
+from save_convert.tales_of.vesperia.vesperia_save_converter import (
     VESPERIA_PC_SAVE_SIZE,
     VESPERIA_PS3_SAVE_SIZE,
     start_convert,

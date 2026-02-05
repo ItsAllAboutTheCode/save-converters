@@ -13,7 +13,7 @@ import tempfile
 import shutil
 import sys
 from typing import Any, cast, override
-from save_convert.vesperia_title_id_list import (
+from save_convert.tales_of.vesperia.vesperia_title_id_list import (
     VESPERIA_PC_TITLE_IDS,
     VESPERIA_PS3_TITLE_IDS,
 )
