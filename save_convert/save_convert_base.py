@@ -90,17 +90,13 @@ class ReplaceResult:
     replace_complete: ReplaceState
 
 
-def replace_copy(
-    input_data: bytes, offset: int, source_range: Range, _convert_format: ConvertFormat
-) -> ReplaceResult:
+def replace_copy(input_data: bytes, offset: int, source_range: Range, _convert_format: ConvertFormat) -> ReplaceResult:
     """Copies all the bytes from @offset to to the end offset of the @source_range of the input data
     into an immutable array of bytes
     This is the default passthrough function for copying output from the input file without modification
     """
     if offset < source_range.start or offset > source_range.end:
-        return ReplaceResult(
-            data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip
-        )
+        return ReplaceResult(data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip)
     return ReplaceResult(
         data=input_data[offset : source_range.end],
         new_offset=source_range.end,
@@ -125,9 +121,7 @@ def get_replace_range_bytes(output_bytes: bytes) -> Callable[..., ReplaceResult]
         """
         # If the offset is not in range, there is nothing to replace
         if offset < source_range.start or offset > source_range.end:
-            return ReplaceResult(
-                data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip
-            )
+            return ReplaceResult(data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip)
 
         # Offset should be equal to the start offset of the source range
         # But if it is not skip over the difference
@@ -167,9 +161,7 @@ def get_replace_endian_swap(swap_size: EndianSwapSize) -> Callable[..., ReplaceR
         """
         # If the offset is not in range, there is nothing to replace
         if offset < source_range.start or offset > source_range.end:
-            return ReplaceResult(
-                data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip
-            )
+            return ReplaceResult(data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip)
 
         # Round down the end offset to nearest multiple of swap_size from the start offset
         offset_end: int = source_range.end - (source_range.end - offset) % swap_size
@@ -183,9 +175,7 @@ def get_replace_endian_swap(swap_size: EndianSwapSize) -> Callable[..., ReplaceR
         return ReplaceResult(
             data=bytes(output_data),
             new_offset=offset_end,
-            replace_complete=ReplaceState.Complete
-            if offset_end == source_range.end
-            else ReplaceState.Skip,
+            replace_complete=ReplaceState.Complete if offset_end == source_range.end else ReplaceState.Skip,
         )
 
     return replace_endian_swap
@@ -198,9 +188,7 @@ class ReplaceMap:
     """
 
     source_range: Range = Range()
-    replace_func: Callable[[bytes, int, Range, ConvertFormat], ReplaceResult] = (
-        replace_copy
-    )
+    replace_func: Callable[[bytes, int, Range, ConvertFormat], ReplaceResult] = replace_copy
 
 
 def fill_replace_func_in_offset_range_gaps(
@@ -242,9 +230,7 @@ def fill_replace_func_in_offset_range_gaps(
         if prev_entry.source_range.end < curr_entry.source_range.start:
             new_replace_table.append(
                 ReplaceMap(
-                    source_range=Range(
-                        prev_entry.source_range.end, curr_entry.source_range.start
-                    ),
+                    source_range=Range(prev_entry.source_range.end, curr_entry.source_range.start),
                     replace_func=fill_replace_func,
                 )
             )
@@ -270,9 +256,7 @@ class SaveConvertBase(ABC):
     def convert(self) -> bool:
         op_result = self._pre_convert()
         if not op_result:
-            logger.error(
-                f"Pre-convert failed when running {__class__.__name__} converter"
-            )
+            logger.error(f"Pre-convert failed when running {__class__.__name__} converter")
             return False
 
         op_result = self._convert()
@@ -282,9 +266,7 @@ class SaveConvertBase(ABC):
 
         op_result = self._post_convert()
         if not op_result:
-            logger.error(
-                f"Post-Convert failed when running {__class__.__name__} converter"
-            )
+            logger.error(f"Post-Convert failed when running {__class__.__name__} converter")
             return False
 
         return True

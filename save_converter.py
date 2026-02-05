@@ -25,9 +25,7 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
             if add_commands := getattr(module, "add_commands"):
                 add_commands(new_parser)
         except AttributeError as err:
-            logger.error(
-                f"Module {module.__name__} is missing method 'add_commands': {err}"
-            )
+            logger.error(f"Module {module.__name__} is missing method 'add_commands': {err}")
             continue
 
 
