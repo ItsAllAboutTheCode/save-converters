@@ -19,7 +19,7 @@ jobs:
           python -m pip install --upgrade pip
       - name: Run python unittest
         run: |
-          python -m unittest test/test_*.py
+          python -m unittest tests/test_*.py
 
   ruff-checker:
     name: Ruff

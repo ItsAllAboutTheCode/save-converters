@@ -1,9 +1,8 @@
+from argparse import Namespace
 from io import BytesIO
+from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
-
-from pathlib import Path
-from argparse import Namespace
 
 from save_convert.save_convert_base import (
     ConvertFormat,
@@ -43,8 +42,7 @@ class TestConvertVesperiaSave(TestCase):
         def redirect_data_byte_io(file, mode, *args):
             if mode == "wb":
                 return mock_output_byteio
-            else:
-                return BytesIO(expected_ps3_save_bytes)
+            return BytesIO(expected_ps3_save_bytes)
 
         mock_open_method = MagicMock(side_effect=redirect_data_byte_io)
 
@@ -70,11 +68,10 @@ class TestConvertVesperiaSave(TestCase):
             def redirect_input_from_byte_io(file, mode, *args):
                 if mode == "wb":
                     return mock_output_byteio
-                else:
-                    # Use the bytes from the previous conversion of PS3 -> PC for the conversion
-                    # of PC -> PS3
-                    nonlocal pc_converted_bytes
-                    return BytesIO(pc_converted_bytes)
+                # Use the bytes from the previous conversion of PS3 -> PC for the conversion
+                # of PC -> PS3
+                nonlocal pc_converted_bytes
+                return BytesIO(pc_converted_bytes)
 
             mock_open_method.side_effect = redirect_input_from_byte_io
             test_args.convert_format = ConvertFormat(SaveFormat.PC, SaveFormat.PS3)
