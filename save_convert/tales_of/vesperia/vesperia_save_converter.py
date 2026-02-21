@@ -1,22 +1,16 @@
 #!/usr/bin/env python
-"""
-Script for converting the Tales of Vesperia PS3 save to PC save
-"""
+"""Script for converting the Tales of Vesperia PS3 save to PC save"""
 
 import argparse
-from io import BytesIO
+import bisect
 import logging
 import pathlib
-import bisect
-import struct
-import tempfile
 import shutil
+import struct
 import sys
+import tempfile
+from io import BytesIO
 from typing import Any, cast, override
-from save_convert.tales_of.vesperia.vesperia_title_id_list import (
-    VESPERIA_PC_TITLE_IDS,
-    VESPERIA_PS3_TITLE_IDS,
-)
 
 from save_convert.save_convert_base import (
     ConvertFormat,
@@ -32,6 +26,10 @@ from save_convert.save_convert_base import (
     get_replace_endian_swap,
     get_replace_range_bytes,
     replace_copy,
+)
+from save_convert.tales_of.vesperia.vesperia_title_id_list import (
+    VESPERIA_PC_TITLE_IDS,
+    VESPERIA_PS3_TITLE_IDS,
 )
 
 logger = logging.getLogger("vesperia_save_converter")
@@ -94,11 +92,14 @@ VESPERIA_TITLE_BITFIELD_SIZE = 4 * 15  # There are 15 32-bit ints for title data
 
 
 def patch_obtained_titles(
-    input_data: bytes, offset: int, source_range: Range, convert_format: ConvertFormat
+    input_data: bytes,
+    offset: int,
+    source_range: Range,
+    convert_format: ConvertFormat,
 ) -> ReplaceResult:
     # The offset must exactly match the beginning of the range to discover the all the titles
     if offset != source_range.start:
-        return ReplaceResult(data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip)
+        return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
 
     TITLE_PACK_STRIDE = 4  # 32-bits per title bitfield
     TITLE_PACK_BITS = TITLE_PACK_STRIDE * 8
@@ -118,7 +119,7 @@ def patch_obtained_titles(
     invalid_titles: set[int] = set()
     for title in obtained_titles:
         title_name: str | None = platform_title_list.get(title)
-        # Explicitly check against None as the first title has an empty string value which would make it a valid title without a name
+        # Explicitly check against None as the first title value is to an empty string 
         if title_name is None:
             invalid_titles.add(title)
 
@@ -126,7 +127,7 @@ def patch_obtained_titles(
         char_index = (offset - VESPERIA_FIRST_PC_OFFSET_PS3 - VESPERIA_TITLE_BITFIELD_OFFSET) // VESPERIA_PC_BLOCK_SIZE
         logger.info(
             f"Character {char_index} has invalid titles obtained at bits: {invalid_titles} from offset 0x{offset:X}\n"
-            + "Invalid titles will set to 0 (not obtained)"
+            "Invalid titles will set to 0 (not obtained)",
         )
 
     output_title_array: list[int] = [0] * (VESPERIA_TITLE_BITFIELD_SIZE // TITLE_PACK_STRIDE)
@@ -172,10 +173,12 @@ VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET = 0x10
 # r8 = Can be between [0x31 - 0x3D] based on debugging DLC check routine of a converted PS3 save that triggered failure
 # The value of 0x31  appears to be where DLC items start at. It appears it is a bitfield of obtained items
 # So 0x31 (count) * 4 (bytes) * 8 ( bits per byte) = 0x620 = 1568 for the Item ID.
-# Looking through the item list for the games normal items the highest value is 1237, so it is guessed that this is where the DLC items start
+# Looking through the item list for the games normal items the highest value is 1237, so it is guessed that this is
+# where the DLC items start
 #
 # Based on the number of 32-bit bitfields being check 0x31 thru 0x3D which is 52 bytes total,
-# plus the fact that these types of fields tend to be 16 byte aligned, the stride of this check offset will be assumed to be 64 bytes(16 int sized bitfields)
+# plus the fact that these types of fields tend to be 16 byte aligned, the stride of this check offset will be assumed
+# to be 64 bytes(16 int sized bitfields)
 
 VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET = 0xA7E00
 VESPERIA_PC_DLC_ITEM_CHECK_OFFSET = VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET
@@ -185,12 +188,6 @@ VESPERIA_DLC_ITEM_CHECK_STRIDE = 64
 REPLACE_OFFSET_TABLE: dict[ConvertFormat, list[ReplaceMap]] = {
     ConvertFormat(SaveFormat.PS3, SaveFormat.PC): [
         # Replaces the PS3 save header with a working PC save
-        # ReplaceMap(
-        #    source_range=Range(0x0, 0x230),
-        #    replace_bytes=bytes.fromhex(
-        #        "660000000000000018020000B0CA0C006400000052E3D20136B6796900000000E4C98800550000000B3333303332300009000A000B00FFFF09000C000B000D00FFFF0C000E000D000F00FFFF0900080010001100120013001400150016001700180019001A001B0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000070000000300000008000000050000000600000005000000040000007F0000003E2200003E220000E7030000E70300000B323030303900005E005F00600061006200630064006500FFFF660065006700020000007F000000D9220000D9220000E7030000E70300000B3230303035000000000000000000000000000000000000000000000000000001000000800000000F2700000F270000E7030000E70300000B32303030300000000000000000000000000000000000000000000000000000090000007F0000000F2700000F270000E7030000E70300000B3230303234000000000000000000000000000000000000000000000000000001000000544F385341564500"
-        #    ),
-        # ),
         # Replace the save block filesize from the PS3 file which is big-endian: 00 0C CA A0 = 838304 bytes
         # With the PC save block size in little-endian: B0 CA 0C 00 = 838320 bytes
         ReplaceMap(
@@ -474,7 +471,7 @@ REPLACE_OFFSET_TABLE: dict[ConvertFormat, list[ReplaceMap]] = {
         # The PS3 input offset would be at 0x38A8
         ReplaceMap(
             source_range=Range(0x38A8, 0x38B8),
-            replace_func=get_replace_range_bytes(bytes()),
+            replace_func=get_replace_range_bytes(b""),
         ),
         #### Any source_range after this point requires 0x10 to be added to translated from the PC offset.
         ReplaceMap(
@@ -517,8 +514,7 @@ REPLACE_OFFSET_TABLE: dict[ConvertFormat, list[ReplaceMap]] = {
 
 
 def create_replace_offset_dict(convert_format: ConvertFormat, patch_dlc_item_checks: bool) -> list[ReplaceMap]:
-    """
-    Returns a dictionary of offset -> byte array entries that indicates which
+    """Returns a dictionary of offset -> byte array entries that indicates which
     actions should be performed when an address is encountered from the input save
 
     :param: patch_dlc_item_checks - If True, replaces the DLC obtained item bits from the save file to be 0(unobtained)
@@ -581,7 +577,8 @@ def create_replace_offset_dict(convert_format: ConvertFormat, patch_dlc_item_che
     else:
         raise ValueError(f"Source convert format {convert_format.source} does not have known save size. Aborting...")
     if game_replace_table[-1].source_range.end < input_save_size:
-        error_message += f"The last range entry end offset must be at least {input_save_size:x}. It is {game_replace_table[-1].source_range.end}\n"
+        error_message += f"The last range entry end offset must be at least {input_save_size:x}."
+        f" It is {game_replace_table[-1].source_range.end}\n"
 
     if error_message:
         raise RangeNotCoveredException(error_message)
@@ -596,8 +593,7 @@ def process_input_savedata(
     replace_start_index: int,
     convert_format: ConvertFormat,
 ) -> ReplaceResult:
-    """
-    Process every 4 bytes(32-bits) of the input data to determine how it should be written to the output
+    """Process every 4 bytes(32-bits) of the input data to determine how it should be written to the output
     The order of precendence for operations are:
     1. Determine if bytes should be replaced at an offset (Replace bytes)
     2. Determine if the bytes at an offset should be endian swaped based on the endian_swap_size value (Swap Bytes)
@@ -614,7 +610,6 @@ def process_input_savedata(
     :return: Result class containing (bytes_to_write_to_output, updated_input_offset,
              replacement for the current input range has completed)
     """
-
     ### Determine if offset references a value within the replace set
     replace_index: int = -1
     if replace_set:
@@ -639,7 +634,7 @@ def process_input_savedata(
         output_result = replace_set[replace_index].replace_func(input_data, offset, source_range, convert_format)
         return output_result
 
-    return ReplaceResult(data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip)
+    return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
 
 
 class SaveConvertVesperia(SaveConvertBase):
@@ -652,9 +647,9 @@ class SaveConvertVesperia(SaveConvertBase):
 
     def __init__(self, args: argparse.Namespace):
         super().__init__()
-        self._input_path = cast(pathlib.Path, args.input)
-        self._convert_format = cast(ConvertFormat, args.convert_format)
-        self._patch_dlc_checks = cast(bool, args.patch_dlc_item_checks)
+        self._input_path = cast("pathlib.Path", args.input)
+        self._convert_format = cast("ConvertFormat", args.convert_format)
+        self._patch_dlc_checks = cast("bool", args.patch_dlc_item_checks)
         output_path: pathlib.Path | None = args.output  # pyright: ignore[reportAny]
         if not output_path:
             output_path = self._input_path.with_suffix(f"{self._input_path.suffix}.{self._convert_format.target}")
@@ -664,9 +659,7 @@ class SaveConvertVesperia(SaveConvertBase):
 
     @override
     def _pre_convert(self) -> bool:
-        """
-        Pre-load save data from the input file into memory
-        """
+        """Pre-load save data from the input file into memory"""
         # Read the entire save into memory
         with self._input_path.open("rb") as infile:
             try:
@@ -679,11 +672,9 @@ class SaveConvertVesperia(SaveConvertBase):
 
     @override
     def _convert(self) -> bool:
-        """
-        Iterates over the input save file, attempting byte replacements from the source save format
+        """Iterates over the input save file, attempting byte replacements from the source save format
         in order to convert the target save format
         """
-
         self._output_io = BytesIO()  # Create a in-memory binary IO buffer for storing output data
         replace_set = create_replace_offset_dict(
             convert_format=self._convert_format,
@@ -705,7 +696,7 @@ class SaveConvertVesperia(SaveConvertBase):
                 if self._output_io.write(result.data) != len(result.data):
                     logger.error(
                         f"Unable to write {len(result.data)} bytes  to output. Input offset: {cur_offset}."
-                        + f" Output offset: {self._output_io.tell()}"
+                        f" Output offset: {self._output_io.tell()}",
                     )
                     return False
             except OSError as _err:
@@ -725,9 +716,7 @@ class SaveConvertVesperia(SaveConvertBase):
 
     @override
     def _post_convert(self) -> bool:
-        """
-        Writes the output data to the destination file atomically
-        """
+        """Writes the output data to the destination file atomically"""
         # Now copy temporary output file to destination
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_output_path = pathlib.Path(f"{tmpdir}/{self._output_path.name}").resolve()
@@ -788,7 +777,8 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
         action=ConvertFormatAction,
         choices=["ps3-to-pc", "pc-to-ps3"],
         default=VESPERIA_PS3_TO_PC_FORMAT,
-        help="Specifies the input file save format and what should the output file format should be. Only PS3 and PC supported at this time",
+        help="Specifies the input file save format and what should the output file format should be."
+        " Only PS3 and PC supported at this time",
     )
 
     parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
@@ -796,7 +786,8 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
         "-p",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Patches the DLC item obtained bytes from the save file to allow the saves with incompatible DLC to be loaded (Default=True)",
+        help="Patches the DLC item obtained bytes from the save file to allow the saves with incompatible DLC"
+        " to be loaded (Default=True)",
     )
     parser.set_defaults(func=start_convert)
 

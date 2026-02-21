@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-"""
-Frontend script to select which save converter command to run for a specific game
-"""
+"""Frontend script to select which save converter command to run for a specific game"""
 
 import argparse
-from importlib import import_module
 import logging
 import sys
+from importlib import import_module
+
 from save_convert import converter_modules
 
 logger = logging.getLogger("save_converter")
@@ -18,11 +17,11 @@ logger.addHandler(stdoutHandler)
 def add_commands(parser: argparse.ArgumentParser) -> None:
 
     subparsers = parser.add_subparsers()
-    for parser_name, module_name in converter_modules.items():
-        module = import_module(f"save_convert.{module_name}")
+    for parser_name, module_path in converter_modules.items():
+        module = import_module(f"{module_path}")
         new_parser = subparsers.add_parser(parser_name)
         try:
-            if add_commands := getattr(module, "add_commands"):
+            if add_commands := module.add_commands:
                 add_commands(new_parser)
         except AttributeError as err:
             logger.error(f"Module {module.__name__} is missing method 'add_commands': {err}")

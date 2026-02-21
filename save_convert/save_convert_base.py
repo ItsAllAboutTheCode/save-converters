@@ -1,14 +1,14 @@
-"""
-Script for converting the Tales of Vesperia PS3 save to PC save
+"""Base Script file containing base classes and methods
+used to perform save patching from a source -> target platform
 """
 
-from abc import ABC, abstractmethod
-from collections.abc import Callable
-from enum import Enum
 import logging
 import pathlib
-from dataclasses import dataclass
 import sys
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import Enum
 from typing import Self
 
 logger = logging.getLogger("save_converter")
@@ -21,8 +21,7 @@ SCRIPT_NAME = pathlib.Path(__file__).name
 
 @dataclass(order=True, unsafe_hash=True)
 class Range:
-    """
-    Represents a range offsets within a file.
+    """Represents a range offsets within a file.
     The start value is inclusive and the end value is exclusive.
     Therefore forming the range of [start, end)
     """
@@ -96,7 +95,7 @@ def replace_copy(input_data: bytes, offset: int, source_range: Range, _convert_f
     This is the default passthrough function for copying output from the input file without modification
     """
     if offset < source_range.start or offset > source_range.end:
-        return ReplaceResult(data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip)
+        return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
     return ReplaceResult(
         data=input_data[offset : source_range.end],
         new_offset=source_range.end,
@@ -105,8 +104,7 @@ def replace_copy(input_data: bytes, offset: int, source_range: Range, _convert_f
 
 
 def get_replace_range_bytes(output_bytes: bytes) -> Callable[..., ReplaceResult]:
-    """
-    Binds the @output_bytes variable to the replace_range_bytes callable to
+    """Binds the @output_bytes variable to the replace_range_bytes callable to
     allow custom array of bytes to be replaced at an offset range within the input data
     """
 
@@ -121,7 +119,7 @@ def get_replace_range_bytes(output_bytes: bytes) -> Callable[..., ReplaceResult]
         """
         # If the offset is not in range, there is nothing to replace
         if offset < source_range.start or offset > source_range.end:
-            return ReplaceResult(data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip)
+            return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
 
         # Offset should be equal to the start offset of the source range
         # But if it is not skip over the difference
@@ -142,8 +140,7 @@ class EndianSwapSize(int, Enum):
 
 
 def get_replace_endian_swap(swap_size: EndianSwapSize) -> Callable[..., ReplaceResult]:
-    """
-    Binds the @output_bytes variable to the replace_range_bytes callable to
+    """Binds the @output_bytes variable to the replace_range_bytes callable to
     allow custom array of bytes to be replaced at an offset range within the input data
     """
 
@@ -161,7 +158,7 @@ def get_replace_endian_swap(swap_size: EndianSwapSize) -> Callable[..., ReplaceR
         """
         # If the offset is not in range, there is nothing to replace
         if offset < source_range.start or offset > source_range.end:
-            return ReplaceResult(data=bytes(), new_offset=offset, replace_complete=ReplaceState.Skip)
+            return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
 
         # Round down the end offset to nearest multiple of swap_size from the start offset
         offset_end: int = source_range.end - (source_range.end - offset) % swap_size
@@ -169,7 +166,8 @@ def get_replace_endian_swap(swap_size: EndianSwapSize) -> Callable[..., ReplaceR
         output_data = bytearray()
         for byte_offset in range(offset, offset_end, swap_size):
             output_data += int.from_bytes(
-                bytes=input_data[byte_offset : byte_offset + swap_size], byteorder="big"
+                bytes=input_data[byte_offset : byte_offset + swap_size],
+                byteorder="big",
             ).to_bytes(length=swap_size, byteorder="little")
 
         return ReplaceResult(
@@ -183,9 +181,7 @@ def get_replace_endian_swap(swap_size: EndianSwapSize) -> Callable[..., ReplaceR
 
 @dataclass(order=True)
 class ReplaceMap:
-    """
-    Maps a range of offset from the input data to a view of byte to replace the input in the output
-    """
+    """Maps a range of offset from the input data to a view of byte to replace the input in the output"""
 
     source_range: Range = Range()
     replace_func: Callable[[bytes, int, Range, ConvertFormat], ReplaceResult] = replace_copy
@@ -196,16 +192,24 @@ def fill_replace_func_in_offset_range_gaps(
     fill_replace_func: Callable[[bytes, int, Range, ConvertFormat], ReplaceResult],
     max_offset: int,
 ) -> list[ReplaceMap]:
-    """
-    Add any source range -> replace function mappings for any offset range
+    """Add any source range -> replace function mappings for any offset range
     that is not covered in the input @replace_table.
+
     Example:
     range1 = [0x0, 0x30) and range2 = [0x40, 0x70)
     The range of [0x30, 0x40) is not covered in the @replace_table, therefore a range
     will be added that maps to the supplied function.
+
     """
+
     if not replace_table:
-        return []
+        # Replace table is empty so set the entire range to use the replacement fill function
+        return [
+            ReplaceMap(
+                source_range=Range(0, max_offset),
+                replace_func=fill_replace_func,
+            )
+        ]
 
     # Sort the replace table
     sorted_replace_table = sorted(
@@ -222,7 +226,7 @@ def fill_replace_func_in_offset_range_gaps(
             ReplaceMap(
                 source_range=Range(0, prev_entry.source_range.start),
                 replace_func=fill_replace_func,
-            )
+            ),
         )
 
     new_replace_table.append(prev_entry)
@@ -232,7 +236,7 @@ def fill_replace_func_in_offset_range_gaps(
                 ReplaceMap(
                     source_range=Range(prev_entry.source_range.end, curr_entry.source_range.start),
                     replace_func=fill_replace_func,
-                )
+                ),
             )
         new_replace_table.append(curr_entry)
         prev_entry = curr_entry
@@ -244,7 +248,7 @@ def fill_replace_func_in_offset_range_gaps(
             ReplaceMap(
                 source_range=Range(prev_entry.source_range.end, max_offset),
                 replace_func=fill_replace_func,
-            )
+            ),
         )
 
     return new_replace_table
