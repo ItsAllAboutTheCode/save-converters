@@ -1,0 +1,99 @@
+on:
+  workflow_dispatch:
+    inputs:
+      release-tag-number:
+        description: "Enter the release-tag number"
+        required: true
+        default: "v1.0.0"
+
+name: Create Release Package
+run-name: ${{ github.actor }} triggered release package creation
+jobs:
+  build-project:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Setup uv
+        uses: hynek/setup-cached-uv@v2
+      - name: Install Python dependencies
+        run: |
+          uv sync
+      - name: Build package using hatch
+        run: |
+          . .venv/bin/activate
+          hatch build -t custom
+          printf 'ARTIFACT_NAME=%s\n' $(find dist/ -maxdepth 1 -type f -name '*.zip' -printf '%f\n') >> ${GITHUB_ENV}
+      - name: Upload ${{ runner.os }} pyinstaller zip
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: dist/*.zip
+          compression-level: 0
+          retention-days: 1
+
+  create-release:
+    needs: build-project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Previous Tags
+        id: previous_tag
+        run: |
+          tags=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/OWNER/REPO/tag \
+            | jq -r '.[].name')
+           previous_tag=$(echo "$tags" | sort -V | tail -n 2 | head -n 1)
+           echo ${previous_tag}
+           echo "PREVIOUS_TAG=${previous_tag}" >> ${GITHUB_ENV}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+      - name: Generate Release Notes
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository }}/releases/generate-notes \
+            -f tag_name=${{ inputs.release-tag-number }} \
+            -f target_commitish=main \
+            -f previous_tag_name=${{ env.PREVIOUS_TAG }} \
+            | jq -r '.body' > releaseNote.md
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+      - name: View Release Notes
+        run: cat releaseNote.md
+        shell: bash
+      - name: Create Release
+        id: create_release
+        run: |
+          gh release create ${{ inputs.release-tag-number }} --prerelease --draft -F releaseNote.md
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+      - name: Download Linux pyinstaller zip
+        uses: actions/download-artifact@v6
+        with:
+          path: dist/
+
+      - name: Upload linux artifacts
+        id: upload_linux_artifacts
+        run: |
+          gh release upload ${{ inputs.release-tag-number }} dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash

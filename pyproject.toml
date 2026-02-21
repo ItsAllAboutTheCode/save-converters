@@ -1,0 +1,106 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "save_converter"
+dynamic = ["version"]
+authors = [
+  { name="ItsAllAboutTheCode"},
+]
+description = "Scripts for converting decrypted save files from various game console platform format to/from the Windows/Linux format"
+readme = "README.md"
+requires-python = ">=3.14"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+
+[project.urls]
+Homepage = "https://github.com/ItsAllAboutTheCode/save-converter"
+Issues = "https://github.com/ItsAllAboutTheCode/save-converter/issues"
+
+
+[project.optional-dependencies]
+lint = [
+  "ruff"
+]
+
+[dependency-groups]
+dev = [
+    "hatch>=1.16.3",
+    "pyinstaller>=6.19.0",
+]
+
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build]
+artifacts = [
+  "save_convert/version.py",
+]
+exclude = [
+  "*~",
+  ".github",
+]
+
+[tool.hatch.build.hooks.vcs]
+version-file = "save_convert/version.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "save_converter.py",
+  "save_convert",
+  "tests",
+  "*.md",
+  "LICENSE"
+]
+
+[tool.hatch.build.targets.custom]
+dependencies = [
+  "pyinstaller",
+]
+path = "hatch_build.py"
+pyinstaller_spec = "save_converter.spec"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "save_convert",
+]
+
+
+[tool.hatch.envs.lint]
+dependencies = [
+  "ruff>=0.15.0"
+]
+
+[tool.hatch.envs.lint.scripts]
+lint = [
+  "ruff format",
+  "ruff check --output-format=full --fix --show-fixes",
+  "python -m unittest test",
+]
+lint-action = [
+  "ruff format --check --diff",
+  "ruff check --output-format=github",
+  "python -m unittest test",
+]
+
+
+[tool.ruff]
+line-length = 120
+
+src = [
+  "save_converter.py",
+  "save_convert",
+  "tests",
+]
+
+lint.select = [
+"E", "F", "I"
+]
+
+lint.ignore = ["D", "INP001"]

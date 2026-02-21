@@ -10,3 +10,13 @@ env
 # Code files
 .vscode
 *.code-workspace
+
+#pyinstaller build files
+build/
+dist/
+
+# uv command is only used to produce pylock.toml
+uv.lock
+
+# hatch vcs version - ignore generated version.py
+save_convert/version.py
