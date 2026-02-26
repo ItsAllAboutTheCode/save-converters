@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Disable Save Validation Checks"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ed8_3_PC.exe
+  Version:
+  Date   : 2026-01-17
+  Author : SandwichSage
+
+  This script skips all save validation checks.
+  This will skip the DLC dependency check, save version check
+  and save checksum check
+}
+
+[ENABLE]
+
+aobscanmodule(dlc_consumed_check_aob,ed8_3_PC.exe,73 42 81 FE 00 10 00 00) // should be unique
+alloc(newmem,$1000,dlc_consumed_check_aob)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  jae ed8_3_PC.exe+3C5CB9
+  cmp esi,00001000
+  jmp return
+
+dlc_consumed_check_aob:
+  jmp newmem
+  nop 3
+return:
+registersymbol(dlc_consumed_check_aob)
+
+[DISABLE]
+
+dlc_consumed_check_aob:
+  db 73 42 81 FE 00 10 00 00
+
+unregistersymbol(dlc_consumed_check_aob)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed8_3_PC.exe+3C5C75
+
+ed8_3_PC.exe+3C5C4B: E9 9B 01 00 00           - jmp ed8_3_PC.exe+3C5DEB
+ed8_3_PC.exe+3C5C50: 48 8B 15 09 D6 88 00     - mov rdx,[ed8_3_PC.exe+C53260]
+ed8_3_PC.exe+3C5C57: 33 F6                    - xor esi,esi
+ed8_3_PC.exe+3C5C59: 0F 1F 80 00 00 00 00     - nop dword ptr [rax+00000000]
+ed8_3_PC.exe+3C5C60: 8B C6                    - mov eax,esi
+ed8_3_PC.exe+3C5C62: 8B CE                    - mov ecx,esi
+ed8_3_PC.exe+3C5C64: 48 C1 E8 05              - shr rax,05
+ed8_3_PC.exe+3C5C68: 83 E1 1F                 - and ecx,1F
+ed8_3_PC.exe+3C5C6B: 8B 84 82 64 DF 20 00     - mov eax,[rdx+rax*4+0020DF64]
+ed8_3_PC.exe+3C5C72: 0F A3 C8                 - bt eax,ecx
+// ---------- INJECTING HERE ----------
+ed8_3_PC.exe+3C5C75: 73 42                    - jae ed8_3_PC.exe+3C5CB9
+// ---------- DONE INJECTING  ----------
+ed8_3_PC.exe+3C5C77: 81 FE 00 10 00 00        - cmp esi,00001000
+ed8_3_PC.exe+3C5C7D: 8D 86 00 F0 FF FF        - lea eax,[rsi-00001000]
+ed8_3_PC.exe+3C5C83: 0F 42 C6                 - cmovb eax,esi
+ed8_3_PC.exe+3C5C86: 66 83 3D C6 B0 2F 01 00  - cmp word ptr [ed8_3_PC.exe+16C0D54],00
+ed8_3_PC.exe+3C5C8E: 75 09                    - jne ed8_3_PC.exe+3C5C99
+ed8_3_PC.exe+3C5C90: 48 8B 8A 98 D9 20 00     - mov rcx,[rdx+0020D998]
+ed8_3_PC.exe+3C5C97: EB 07                    - jmp ed8_3_PC.exe+3C5CA0
+ed8_3_PC.exe+3C5C99: 48 8B 8A A0 D9 20 00     - mov rcx,[rdx+0020D9A0]
+ed8_3_PC.exe+3C5CA0: 8B D0                    - mov edx,eax
+ed8_3_PC.exe+3C5CA2: E8 89 A8 EB FF           - call ed8_3_PC.exe+280530
+}
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>PROCESS_NAME = 'ed8_3_PC.exe'
+AUTO_ACTIVE_SCRIPTS = {}
+table.insert(AUTO_ACTIVE_SCRIPTS, 'Disable Save Validation Checks')
+--------
+-------- Auto Attach
+--------
+local autoAttachTimer = nil ---- variable to hold timer object
+local autoAttachTimerInterval = 1000 ---- Timer intervals are in milliseconds
+local autoAttachTimerTicks = 0 ---- variable to count number of times the timer has run
+local autoAttachTimerTickMax = 10000 ---- Set to zero to disable ticks max
+local function autoAttachTimer_tick(timer) ---- Timer tick call back
+    ---- Destroy timer if max ticks is reached
+    if autoAttachTimerTickMax &gt; 0 and autoAttachTimerTicks &gt;= autoAttachTimerTickMax then
+        timer.destroy()
+    end
+       ---- Check if process is running
+    if getProcessIDFromProcessName(PROCESS_NAME) ~= nil then
+        timer.destroy() ---- Destroy timer
+        openProcess(PROCESS_NAME) ---- Open the process
+        ---- Activate auto active script list
+        for i, script_name in ipairs(AUTO_ACTIVE_SCRIPTS) do
+            getAddressList().getMemoryRecordByDescription(script_name).Active = true
+        end
+    end
+    autoAttachTimerTicks = autoAttachTimerTicks + 1 ---- Increase ticks
+end
+autoAttachTimer = createTimer(getMainForm()) ---- Create timer with the main form as it's parent
+autoAttachTimer.Interval = autoAttachTimerInterval ---- Set timer interval
+autoAttachTimer.OnTimer = autoAttachTimer_tick ---- Set timer tick call back
+</LuaScript>
+</CheatTable>

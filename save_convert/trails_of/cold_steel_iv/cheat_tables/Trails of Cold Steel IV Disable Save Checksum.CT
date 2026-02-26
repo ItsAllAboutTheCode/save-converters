@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Disable Save Checksum"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ed8_4_PC.exe
+  Version:
+  Date   : 2026-01-29
+  Author : SandwichSage
+
+  This script skips the save checksum validation
+  The checksum is located at offset 0xC within in saveXXX.dat file
+  for a save
+}
+
+[ENABLE]
+
+aobscanmodule(disable_save_checksum_aob,ed8_4_PC.exe,74 04 40 88 6F 15) // should be unique
+alloc(newmem,$1000,disable_save_checksum_aob)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  jmp ed8_4_PC.exe+3E7385
+
+disable_save_checksum_aob:
+  jmp newmem
+  nop
+return:
+registersymbol(disable_save_checksum_aob)
+
+[DISABLE]
+
+disable_save_checksum_aob:
+  db 74 04 40 88 6F 15
+
+unregistersymbol(disable_save_checksum_aob)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed8_4_PC.exe+3E737F
+
+ed8_4_PC.exe+3E7358: BE 01 00 00 00     - mov esi,00000001
+ed8_4_PC.exe+3E735D: BA A0 04 00 00     - mov edx,000004A0
+ed8_4_PC.exe+3E7362: 41 39 36           - cmp [r14],esi
+ed8_4_PC.exe+3E7365: 49 8D 4E 10        - lea rcx,[r14+10]
+ed8_4_PC.exe+3E7369: 0F B6 47 12        - movzx eax,byte ptr [rdi+12]
+ed8_4_PC.exe+3E736D: 0F 47 C5           - cmova eax,ebp
+ed8_4_PC.exe+3E7370: 83 C2 F0           - add edx,-10
+ed8_4_PC.exe+3E7373: 88 47 12           - mov [rdi+12],al
+ed8_4_PC.exe+3E7376: E8 95 4C CB FF     - call ed8_4_PC.exe+9C010
+ed8_4_PC.exe+3E737B: 41 39 46 0C        - cmp [r14+0C],eax
+// ---------- INJECTING HERE ----------
+ed8_4_PC.exe+3E737F: 74 04              - je ed8_4_PC.exe+3E7385
+// ---------- DONE INJECTING  ----------
+ed8_4_PC.exe+3E7381: 40 88 6F 15        - mov [rdi+15],bpl
+ed8_4_PC.exe+3E7385: 40 38 6F 12        - cmp [rdi+12],bpl
+ed8_4_PC.exe+3E7389: 0F 84 C2 00 00 00  - je ed8_4_PC.exe+3E7451
+ed8_4_PC.exe+3E738F: 40 38 6F 13        - cmp [rdi+13],bpl
+ed8_4_PC.exe+3E7393: 0F 84 B8 00 00 00  - je ed8_4_PC.exe+3E7451
+ed8_4_PC.exe+3E7399: 40 38 6F 14        - cmp [rdi+14],bpl
+ed8_4_PC.exe+3E739D: 0F 84 AE 00 00 00  - je ed8_4_PC.exe+3E7451
+ed8_4_PC.exe+3E73A3: 40 38 6F 15        - cmp [rdi+15],bpl
+ed8_4_PC.exe+3E73A7: 0F 84 A4 00 00 00  - je ed8_4_PC.exe+3E7451
+ed8_4_PC.exe+3E73AD: 83 FB 01           - cmp ebx,01
+}
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>PROCESS_NAME = 'ed8_4_PC.exe'
+AUTO_ACTIVE_SCRIPTS = {}
+table.insert(AUTO_ACTIVE_SCRIPTS, 'Disable Save Checksum')
+
+--------
+-------- Auto Attach
+--------
+local autoAttachTimer = nil ---- variable to hold timer object
+local autoAttachTimerInterval = 1000 ---- Timer intervals are in milliseconds
+local autoAttachTimerTicks = 0 ---- variable to count number of times the timer has run
+local autoAttachTimerTickMax = 10000 ---- Set to zero to disable ticks max
+local function autoAttachTimer_tick(timer) ---- Timer tick call back
+    ---- Destroy timer if max ticks is reached
+    if autoAttachTimerTickMax &gt; 0 and autoAttachTimerTicks &gt;= autoAttachTimerTickMax then
+        timer.destroy()
+    end
+    ---- Check if process is running
+    if getProcessIDFromProcessName(PROCESS_NAME) ~= nil then
+        timer.destroy() ---- Destroy timer
+        openProcess(PROCESS_NAME) ---- Open the process
+        for i, script_name in ipairs(AUTO_ACTIVE_SCRIPTS) do
+            getAddressList().getMemoryRecordByDescription(script_name).Active = true
+        end
+    end
+    autoAttachTimerTicks = autoAttachTimerTicks + 1 ---- Increase ticks
+end
+autoAttachTimer = createTimer(getMainForm()) ---- Create timer with the main form as it's parent
+autoAttachTimer.Interval = autoAttachTimerInterval ---- Set timer interval
+autoAttachTimer.OnTimer = autoAttachTimer_tick ---- Set timer tick call back
+</LuaScript>
+</CheatTable>

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Disable Save Checksum"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : The Legend of Heroes: Trails into Reverie | GoG Inited
+  Version:
+  Date   : 2026-02-07
+  Author : SandwichSage
+
+  This script skips the save checksum validation
+  The checksum is located at offset 0xC within in saveXXX.dat file
+  for a save
+}
+
+[ENABLE]
+
+aobscanmodule(disable_save_checksum_aob,hnk.exe,74 04 44 88 5E 15) // should be unique
+alloc(newmem,$1000,disable_save_checksum_aob)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  jmp hnk.exe+59D278
+
+disable_save_checksum_aob:
+  jmp newmem
+  nop
+return:
+registersymbol(disable_save_checksum_aob)
+
+[DISABLE]
+
+disable_save_checksum_aob:
+  db 74 04 44 88 5E 15
+
+unregistersymbol(disable_save_checksum_aob)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: hnk.exe+59D272
+
+hnk.exe+59D247: 66 0F 1F 84 00 00 00 00 00  - nop word ptr [rax+rax+00000000]
+hnk.exe+59D250: 41 0F B6 00                 - movzx eax,byte ptr [r8]
+hnk.exe+59D254: 4D 8D 40 01                 - lea r8,[r8+01]
+hnk.exe+59D258: 0F B6 CA                    - movzx ecx,dl
+hnk.exe+59D25B: 48 33 C8                    - xor rcx,rax
+hnk.exe+59D25E: C1 EA 08                    - shr edx,08
+hnk.exe+59D261: 33 94 8B 90 E8 C0 00        - xor edx,[rbx+rcx*4+00C0E890]
+hnk.exe+59D268: 49 83 EB 01                 - sub r11,01
+hnk.exe+59D26C: 75 E2                       - jne hnk.exe+59D250
+hnk.exe+59D26E: 41 39 52 0C                 - cmp [r10+0C],edx
+// ---------- INJECTING HERE ----------
+hnk.exe+59D272: 74 04                       - je hnk.exe+59D278
+// ---------- DONE INJECTING  ----------
+hnk.exe+59D274: 44 88 5E 15                 - mov [rsi+15],r11b
+hnk.exe+59D278: 80 7E 12 00                 - cmp byte ptr [rsi+12],00
+hnk.exe+59D27C: 74 44                       - je hnk.exe+59D2C2
+hnk.exe+59D27E: 80 7E 15 00                 - cmp byte ptr [rsi+15],00
+hnk.exe+59D282: 74 3E                       - je hnk.exe+59D2C2
+hnk.exe+59D284: 41 83 F9 01                 - cmp r9d,01
+hnk.exe+59D288: 75 16                       - jne hnk.exe+59D2A0
+hnk.exe+59D28A: 48 8B 0D CF 9D 8E 00        - mov rcx,[hnk.exe+E87060]
+hnk.exe+59D291: 41 B8 E0 3E 1A 00           - mov r8d,001A3EE0
+hnk.exe+59D297: 48 81 C1 48 90 5F 00        - add rcx,005F9048
+}
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>PROCESS_NAME = 'hnk.exe'
+AUTO_ACTIVE_SCRIPTS = {}
+table.insert(AUTO_ACTIVE_SCRIPTS, 'Disable Save Checksum')
+
+--------
+-------- Auto Attach
+--------
+local autoAttachTimer = nil ---- variable to hold timer object
+local autoAttachTimerInterval = 1000 ---- Timer intervals are in milliseconds
+local autoAttachTimerTicks = 0 ---- variable to count number of times the timer has run
+local autoAttachTimerTickMax = 10000 ---- Set to zero to disable ticks max
+local function autoAttachTimer_tick(timer) ---- Timer tick call back
+    ---- Destroy timer if max ticks is reached
+    if autoAttachTimerTickMax &gt; 0 and autoAttachTimerTicks &gt;= autoAttachTimerTickMax then
+        timer.destroy()
+    end
+    ---- Check if process is running
+    if getProcessIDFromProcessName(PROCESS_NAME) ~= nil then
+        timer.destroy() ---- Destroy timer
+        openProcess(PROCESS_NAME) ---- Open the process
+        for i, script_name in ipairs(AUTO_ACTIVE_SCRIPTS) do
+            getAddressList().getMemoryRecordByDescription(script_name).Active = true
+        end
+    end
+    autoAttachTimerTicks = autoAttachTimerTicks + 1 ---- Increase ticks
+end
+autoAttachTimer = createTimer(getMainForm()) ---- Create timer with the main form as it's parent
+autoAttachTimer.Interval = autoAttachTimerInterval ---- Set timer interval
+autoAttachTimer.OnTimer = autoAttachTimer_tick ---- Set timer tick call back
+</LuaScript>
+</CheatTable>

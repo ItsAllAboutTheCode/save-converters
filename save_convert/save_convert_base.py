@@ -6,10 +6,10 @@ import logging
 import pathlib
 import sys
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import dataclass
-from enum import Enum
-from typing import Self
+from enum import Enum, StrEnum
+from typing import Self, override
 
 logger = logging.getLogger("save_converter")
 logger.setLevel(logging.INFO)
@@ -57,7 +57,7 @@ class RangeNotCoveredException(Exception):
     pass
 
 
-class SaveFormat(str, Enum):
+class SaveFormat(StrEnum):
     PS3 = "ps3"
     PS4 = "ps4"
     PC = "pc"
@@ -69,6 +69,21 @@ class ConvertFormat:
 
     source: SaveFormat
     target: SaveFormat
+
+    def __str__(self) -> str:
+        """
+        Generates a string out of the convert format into form
+        of <source>-to-target.
+        Ex1. PS4 -> PC conversion = ps4-to-pc
+        Ex1. PC -> PS4 conversion = pc-to-ps4
+        """
+        return f"{self.source}-to-{self.target}"
+
+
+PS4_TO_PC_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS4, target=SaveFormat.PC)
+PC_TO_PS4_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PC, target=SaveFormat.PS4)
+PS3_TO_PC_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS3, target=SaveFormat.PC)
+PC_TO_PS3_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PC, target=SaveFormat.PS3)
 
 
 class ReplaceState(Enum):
@@ -89,48 +104,94 @@ class ReplaceResult:
     replace_complete: ReplaceState
 
 
-def replace_copy(input_data: bytes, offset: int, source_range: Range, _convert_format: ConvertFormat) -> ReplaceResult:
-    """Copies all the bytes from @offset to to the end offset of the @source_range of the input data
-    into an immutable array of bytes
-    This is the default passthrough function for copying output from the input file without modification
+class ReplacePatchBase(ABC):
     """
-    if offset < source_range.start or offset > source_range.end:
-        return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
-    return ReplaceResult(
-        data=input_data[offset : source_range.end],
-        new_offset=source_range.end,
-        replace_complete=ReplaceState.Complete,
-    )
+    Base class for implementing a __call__() operator that can transform a source range of bytes
+    from an input bytearray into an output bytearray.
 
-
-def get_replace_range_bytes(output_bytes: bytes) -> Callable[..., ReplaceResult]:
-    """Binds the @output_bytes variable to the replace_range_bytes callable to
-    allow custom array of bytes to be replaced at an offset range within the input data
+    This class also contains a reverse_patch() class method which can be overridden
+    to act as a method to reverse the patch transformation of the __call__() operator
     """
 
-    def replace_range_bytes(
+    def __init__(self, source_range: Range) -> None:
+        self._source_range: Range = source_range
+
+    @abstractmethod
+    def __call__(self, input_data: bytes, offset: int, convert_format: ConvertFormat) -> ReplaceResult:
+        raise NotImplementedError
+
+    def generate_reverse_patch(self) -> Self:
+        """
+        Default implementation of the reverse_patch operation is to delegate to a new instance
+        of ReplacePatchBase derived class
+        This implementation works for operations that are naturally invertible such as endian swap
+        or a direct byte copy from source -> target.
+        i.e (Input * Transform) * Transform = Input
+        """
+        return type(self)(self._source_range)
+
+    @property
+    def source_range(self) -> Range:
+        return self._source_range
+
+    @source_range.setter
+    def source_range(self, source_range: Range) -> None:
+        self._source_range = source_range
+
+
+class ReplaceCopy(ReplacePatchBase):
+    @override
+    def __call__(self, input_data: bytes, offset: int, _convert_format: ConvertFormat) -> ReplaceResult:
+        """Copies all the bytes from @offset to to the end offset of the @source_range of the input data
+        into an immutable array of bytes
+        This is the default passthrough function for copying output from the input file without modification
+        """
+        if offset < self._source_range.start or offset > self._source_range.end:
+            return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
+        return ReplaceResult(
+            data=input_data[offset : self._source_range.end],
+            new_offset=self._source_range.end,
+            replace_complete=ReplaceState.Complete,
+        )
+
+
+class ReplaceRangeBytes(ReplacePatchBase):
+    def __init__(self, source_range: Range, output_bytes: bytes) -> None:
+        """Binds the @output_bytes variable to the replace_range_bytes callable to
+        allow custom array of bytes to be replaced at an offset range within the input data
+        """
+        super().__init__(source_range)
+        self._output_bytes: bytes = output_bytes
+
+    @override
+    def __call__(
+        self,
         _input_data: bytes,
         offset: int,
-        source_range: Range,
         _convert_format: ConvertFormat,
     ) -> ReplaceResult:
         """Replaces the bytes from the source range with the specified output_bytes data
         The offset should be the same as the @source_range.start value
         """
         # If the offset is not in range, there is nothing to replace
-        if offset < source_range.start or offset > source_range.end:
+        if offset < self._source_range.start or offset > self._source_range.end:
             return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
 
         # Offset should be equal to the start offset of the source range
         # But if it is not skip over the difference
-        output_data = output_bytes[offset - source_range.start :]
+        output_data = self._output_bytes[offset - self._source_range.start :]
         return ReplaceResult(
             data=output_data,
-            new_offset=source_range.end,
+            new_offset=self._source_range.end,
             replace_complete=ReplaceState.Complete,
         )
 
-    return replace_range_bytes
+    @override
+    def generate_reverse_patch(self) -> Self:
+        # The reverse operations fills the output data with 00 bytes
+        output_data = bytes([0x00] * len(self._source_range))
+        reverse_range = Range(start=self._source_range.start, end=len(self._output_bytes) + self._source_range.start)
+        return type(self)(reverse_range, output_data)
 
 
 class EndianSwapSize(int, Enum):
@@ -139,15 +200,19 @@ class EndianSwapSize(int, Enum):
     Size64Bit = 8
 
 
-def get_replace_endian_swap(swap_size: EndianSwapSize) -> Callable[..., ReplaceResult]:
-    """Binds the @output_bytes variable to the replace_range_bytes callable to
-    allow custom array of bytes to be replaced at an offset range within the input data
-    """
+class ReplaceEndianSwap(ReplacePatchBase):
+    def __init__(self, source_range: Range, swap_size: EndianSwapSize) -> None:
+        """Binds the @output_bytes variable to the replace_range_bytes callable to
+        allow custom array of bytes to be replaced at an offset range within the input data
+        """
+        super().__init__(source_range)
+        self._swap_size: EndianSwapSize = swap_size
 
-    def replace_endian_swap(
+    @override
+    def __call__(
+        self,
         input_data: bytes,
         offset: int,
-        source_range: Range,
         _convert_format: ConvertFormat,
     ) -> ReplaceResult:
         """Swaps endian size bytes starting at @offset if it is within the @source_range
@@ -157,39 +222,36 @@ def get_replace_endian_swap(swap_size: EndianSwapSize) -> Callable[..., ReplaceR
         in future calls
         """
         # If the offset is not in range, there is nothing to replace
-        if offset < source_range.start or offset > source_range.end:
+        if offset < self._source_range.start or offset > self._source_range.end:
             return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
 
         # Round down the end offset to nearest multiple of swap_size from the start offset
-        offset_end: int = source_range.end - (source_range.end - offset) % swap_size
+        offset_end: int = self._source_range.end - (self._source_range.end - offset) % self._swap_size
 
         output_data = bytearray()
-        for byte_offset in range(offset, offset_end, swap_size):
+        for byte_offset in range(offset, offset_end, self._swap_size):
             output_data += int.from_bytes(
-                bytes=input_data[byte_offset : byte_offset + swap_size],
+                bytes=input_data[byte_offset : byte_offset + self._swap_size],
                 byteorder="big",
-            ).to_bytes(length=swap_size, byteorder="little")
+            ).to_bytes(length=self._swap_size, byteorder="little")
 
         return ReplaceResult(
             data=bytes(output_data),
             new_offset=offset_end,
-            replace_complete=ReplaceState.Complete if offset_end == source_range.end else ReplaceState.Skip,
+            replace_complete=ReplaceState.Complete if offset_end == self._source_range.end else ReplaceState.Skip,
         )
-
-    return replace_endian_swap
 
 
 @dataclass(order=True)
 class ReplaceMap:
-    """Maps a range of offset from the input data to a view of byte to replace the input in the output"""
+    """Stores a functor that can replace an input range of bytes using a functor"""
 
-    source_range: Range = Range()
-    replace_func: Callable[[bytes, int, Range, ConvertFormat], ReplaceResult] = replace_copy
+    replace_functor: ReplacePatchBase
 
 
 def fill_replace_func_in_offset_range_gaps(
     replace_table: list[ReplaceMap],
-    fill_replace_func: Callable[[bytes, int, Range, ConvertFormat], ReplaceResult],
+    fill_replace_functor: ReplacePatchBase,
     max_offset: int,
 ) -> list[ReplaceMap]:
     """Add any source range -> replace function mappings for any offset range
@@ -204,38 +266,43 @@ def fill_replace_func_in_offset_range_gaps(
 
     if not replace_table:
         # Replace table is empty so set the entire range to use the replacement fill function
+        new_functor: ReplacePatchBase = deepcopy(fill_replace_functor)
+        new_functor.source_range = Range(start=0, end=max_offset)
         return [
             ReplaceMap(
-                source_range=Range(0, max_offset),
-                replace_func=fill_replace_func,
+                replace_functor=new_functor,
             )
         ]
 
     # Sort the replace table
-    sorted_replace_table = sorted(
+    sorted_replace_table: list[ReplaceMap] = sorted(
         replace_table,
-        key=lambda entry: (entry.source_range.start, entry.source_range.end),
+        key=lambda entry: (entry.replace_functor.source_range.start, entry.replace_functor.source_range.end),
     )
 
     new_replace_table: list[ReplaceMap] = []
-    prev_entry = sorted_replace_table[0]
+    prev_entry: ReplaceMap = sorted_replace_table[0]
     # The first entry in the replace table will have the smallest offset.
     # If that offset is >0, then prepend a range mapping of [0, <first-entry-start-offset>) -> replace_func
-    if prev_entry.source_range.start > 0:
+    if prev_entry.replace_functor.source_range.start > 0:
+        new_functor = deepcopy(fill_replace_functor)
+        new_functor.source_range = Range(start=0, end=prev_entry.replace_functor.source_range.start)
         new_replace_table.append(
             ReplaceMap(
-                source_range=Range(0, prev_entry.source_range.start),
-                replace_func=fill_replace_func,
+                replace_functor=new_functor,
             ),
         )
 
     new_replace_table.append(prev_entry)
     for curr_entry in sorted_replace_table[1:]:
-        if prev_entry.source_range.end < curr_entry.source_range.start:
+        if prev_entry.replace_functor.source_range.end < curr_entry.replace_functor.source_range.start:
+            new_functor = deepcopy(fill_replace_functor)
+            new_functor.source_range = Range(
+                start=prev_entry.replace_functor.source_range.end, end=curr_entry.replace_functor.source_range.start
+            )
             new_replace_table.append(
                 ReplaceMap(
-                    source_range=Range(prev_entry.source_range.end, curr_entry.source_range.start),
-                    replace_func=fill_replace_func,
+                    replace_functor=new_functor,
                 ),
             )
         new_replace_table.append(curr_entry)
@@ -243,15 +310,35 @@ def fill_replace_func_in_offset_range_gaps(
 
     # If the last entry in the replace table end offset value is less than the max_offset,
     # then append one final entry with a mapping of [<last-entry-end-offset>, max_offset)
-    if prev_entry.source_range.end < max_offset:
+    if prev_entry.replace_functor.source_range.end < max_offset:
+        new_functor = deepcopy(fill_replace_functor)
+        new_functor.source_range = Range(start=prev_entry.replace_functor.source_range.end, end=max_offset)
         new_replace_table.append(
             ReplaceMap(
-                source_range=Range(prev_entry.source_range.end, max_offset),
-                replace_func=fill_replace_func,
+                replace_functor=new_functor,
             ),
         )
 
     return new_replace_table
+
+
+def generate_reverse_map(source_table: list[ReplaceMap]) -> list[ReplaceMap]:
+    """
+    Takes the source table and generates a list of transformation
+    that can "pseudo" undo the patching done by the source table.
+
+    The reason it is called "pseudo" undo is because any deleted sequence of bytes
+    are then reversed mapped to be filled with '00' bytes sequences.
+    i.e If at offset 0x20, 16 bytes were deleted, then the reverse mapping would
+    insert 16 '00' bytes at offset 0x20.
+    If the the bytes at those indices weren't '00' to begin with, the transformation
+    is lossy
+    """
+    target_table: list[ReplaceMap] = []
+    for source_entry in source_table:
+        target_table.append(ReplaceMap(replace_functor=source_entry.replace_functor.generate_reverse_patch()))
+
+    return target_table
 
 
 class SaveConvertBase(ABC):
