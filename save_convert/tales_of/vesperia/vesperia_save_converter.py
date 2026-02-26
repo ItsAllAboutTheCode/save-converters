@@ -9,23 +9,27 @@ import shutil
 import struct
 import sys
 import tempfile
+from copy import deepcopy
 from io import BytesIO
 from typing import Any, cast, override
 
 from save_convert.save_convert_base import (
+    PC_TO_PS3_CONVERT_FORMAT,
+    PS3_TO_PC_CONVERT_FORMAT,
     ConvertFormat,
     EndianSwapSize,
     Range,
     RangeNotCoveredException,
+    ReplaceCopy,
+    ReplaceEndianSwap,
     ReplaceMap,
+    ReplacePatchBase,
+    ReplaceRangeBytes,
     ReplaceResult,
     ReplaceState,
     SaveConvertBase,
     SaveFormat,
     fill_replace_func_in_offset_range_gaps,
-    get_replace_endian_swap,
-    get_replace_range_bytes,
-    replace_copy,
 )
 from save_convert.tales_of.vesperia.vesperia_title_id_list import (
     VESPERIA_PC_TITLE_IDS,
@@ -38,10 +42,8 @@ stdoutHandler = logging.StreamHandler()
 logger.addHandler(stdoutHandler)
 
 
-VESPERIA_PS3_TO_PC_FORMAT = ConvertFormat(SaveFormat.PS3, SaveFormat.PC)
-VESPERIA_PC_TO_PS3_FORMAT = ConvertFormat(SaveFormat.PC, SaveFormat.PS3)
 VESPERIA_PS3_SAVE_SIZE = 552 + 838304  # 552 byte save header + 838204 byte save data block
-VESPERIA_PC_SAVE_SIZE = VESPERIA_PS3_SAVE_SIZE + 16  # The PC Save block is 16 bytes larget than PS3
+VESPERIA_PC_SAVE_SIZE = VESPERIA_PS3_SAVE_SIZE + 16  # The PC Save block is 16 bytes larger than PS3
 
 
 # Stores the range offset of all the custom character name offsets in the PS3 save file
@@ -54,14 +56,15 @@ VESPERIA_CUSTOM_CHARACTER_NAME_BUFFER_SIZE = 64
 
 VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET_RANGES = (
     ReplaceMap(
-        source_range=Range(
-            VESPERIA_FIRST_PC_OFFSET_PS3 + index * VESPERIA_PC_BLOCK_SIZE + VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET,
-            VESPERIA_FIRST_PC_OFFSET_PS3
-            + index * VESPERIA_PC_BLOCK_SIZE
-            + VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET
-            + VESPERIA_CUSTOM_CHARACTER_NAME_BUFFER_SIZE,
-        ),
-        replace_func=replace_copy,
+        replace_functor=ReplaceCopy(
+            source_range=Range(
+                VESPERIA_FIRST_PC_OFFSET_PS3 + index * VESPERIA_PC_BLOCK_SIZE + VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET,
+                VESPERIA_FIRST_PC_OFFSET_PS3
+                + index * VESPERIA_PC_BLOCK_SIZE
+                + VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET
+                + VESPERIA_CUSTOM_CHARACTER_NAME_BUFFER_SIZE,
+            )
+        )
     )
     for index in range(VESPERIA_NUM_CHARACTERS)
 )
@@ -91,70 +94,78 @@ VESPERIA_TITLE_BITFIELD_SIZE = 4 * 15  # There are 15 32-bit ints for title data
 # With the restoration of Costume Title Mod the PC version can have a total of 445 title as well
 
 
-def patch_obtained_titles(
-    input_data: bytes,
-    offset: int,
-    source_range: Range,
-    convert_format: ConvertFormat,
-) -> ReplaceResult:
-    # The offset must exactly match the beginning of the range to discover the all the titles
-    if offset != source_range.start:
-        return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
+class ReplacePatchObtainedTitles(ReplacePatchBase):
+    @override
+    def __call__(
+        self,
+        input_data: bytes,
+        offset: int,
+        convert_format: ConvertFormat,
+    ) -> ReplaceResult:
+        # The offset must exactly match the beginning of the range to discover the all the titles
+        if offset != self._source_range.start:
+            return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
 
-    TITLE_PACK_STRIDE = 4  # 32-bits per title bitfield
-    TITLE_PACK_BITS = TITLE_PACK_STRIDE * 8
-    obtained_titles: set[int] = set()
+        TITLE_PACK_STRIDE = 4  # 32-bits per title bitfield
+        TITLE_PACK_BITS = TITLE_PACK_STRIDE * 8
+        obtained_titles: set[int] = set()
 
-    for title_bitfield_offset in range(offset, source_range.end, TITLE_PACK_STRIDE):
-        # The Title list also needs to be endian swapped as well
-        title_bitfield = int.from_bytes(
-            bytes=input_data[title_bitfield_offset : title_bitfield_offset + TITLE_PACK_STRIDE],
-            byteorder="big" if convert_format.source == SaveFormat.PS3 else "little",
+        for title_bitfield_offset in range(offset, self._source_range.end, TITLE_PACK_STRIDE):
+            # The Title list also needs to be endian swapped as well
+            title_bitfield = int.from_bytes(
+                bytes=input_data[title_bitfield_offset : title_bitfield_offset + TITLE_PACK_STRIDE],
+                byteorder="big" if convert_format.source == SaveFormat.PS3 else "little",
+            )
+            for title_bit in range(TITLE_PACK_BITS):
+                if (title_bitfield >> title_bit) & 1:
+                    obtained_titles.add((title_bitfield_offset - offset) * 8 + title_bit)
+
+        platform_title_list = (
+            VESPERIA_PS3_TITLE_IDS if convert_format.target == SaveFormat.PS3 else VESPERIA_PC_TITLE_IDS
         )
-        for title_bit in range(TITLE_PACK_BITS):
-            if (title_bitfield >> title_bit) & 1:
-                obtained_titles.add((title_bitfield_offset - offset) * 8 + title_bit)
+        invalid_titles: set[int] = set()
+        for title in obtained_titles:
+            title_name: str | None = platform_title_list.get(title)
+            # Explicitly check against None as the first title value is to an empty string
+            if title_name is None:
+                invalid_titles.add(title)
 
-    platform_title_list = VESPERIA_PS3_TITLE_IDS if convert_format.target == SaveFormat.PS3 else VESPERIA_PC_TITLE_IDS
-    invalid_titles: set[int] = set()
-    for title in obtained_titles:
-        title_name: str | None = platform_title_list.get(title)
-        # Explicitly check against None as the first title value is to an empty string 
-        if title_name is None:
-            invalid_titles.add(title)
+        if invalid_titles:
+            char_index = (
+                offset - VESPERIA_FIRST_PC_OFFSET_PS3 - VESPERIA_TITLE_BITFIELD_OFFSET
+            ) // VESPERIA_PC_BLOCK_SIZE
+            logger.info(
+                f"Character {char_index} has invalid titles obtained at bits: {invalid_titles}"
+                f" from offset 0x{offset:X}\n"
+                "Invalid titles will set to 0 (not obtained)",
+            )
 
-    if invalid_titles:
-        char_index = (offset - VESPERIA_FIRST_PC_OFFSET_PS3 - VESPERIA_TITLE_BITFIELD_OFFSET) // VESPERIA_PC_BLOCK_SIZE
-        logger.info(
-            f"Character {char_index} has invalid titles obtained at bits: {invalid_titles} from offset 0x{offset:X}\n"
-            "Invalid titles will set to 0 (not obtained)",
+        output_title_array: list[int] = [0] * (VESPERIA_TITLE_BITFIELD_SIZE // TITLE_PACK_STRIDE)
+        valid_titles = obtained_titles - invalid_titles
+        for title in valid_titles:
+            output_title_array[title // TITLE_PACK_BITS] |= 1 << title % TITLE_PACK_BITS
+
+        # Pack the title: int[15] array into bytes taking into account the endianess of the output format
+        struct_format = f"{'<' if convert_format.target != SaveFormat.PS3 else '>'}{len(output_title_array)}I"
+        output_data = struct.pack(struct_format, *output_title_array)
+        return ReplaceResult(
+            data=output_data,
+            new_offset=self._source_range.end,
+            replace_complete=ReplaceState.Complete,
         )
-
-    output_title_array: list[int] = [0] * (VESPERIA_TITLE_BITFIELD_SIZE // TITLE_PACK_STRIDE)
-    valid_titles = obtained_titles - invalid_titles
-    for title in valid_titles:
-        output_title_array[title // TITLE_PACK_BITS] |= 1 << title % TITLE_PACK_BITS
-
-    # Pack the title: int[15] array into bytes taking into account the endianess of the output format
-    struct_format = f"{'<' if convert_format.target != SaveFormat.PS3 else '>'}{len(output_title_array)}I"
-    output_data = struct.pack(struct_format, *output_title_array)
-    return ReplaceResult(
-        data=output_data,
-        new_offset=source_range.end,
-        replace_complete=ReplaceState.Complete,
-    )
 
 
 VESPERIA_CHARACTER_OBTAINED_TITLE_OFFSET_RANGES = (
     ReplaceMap(
-        source_range=Range(
-            VESPERIA_FIRST_PC_OFFSET_PS3 + index * VESPERIA_PC_BLOCK_SIZE + VESPERIA_TITLE_BITFIELD_OFFSET,
-            VESPERIA_FIRST_PC_OFFSET_PS3
-            + index * VESPERIA_PC_BLOCK_SIZE
-            + VESPERIA_TITLE_BITFIELD_OFFSET
-            + VESPERIA_TITLE_BITFIELD_SIZE,
-        ),
-        replace_func=patch_obtained_titles,
+        replace_functor=ReplacePatchObtainedTitles(
+            source_range=Range(
+                VESPERIA_FIRST_PC_OFFSET_PS3 + index * VESPERIA_PC_BLOCK_SIZE + VESPERIA_TITLE_BITFIELD_OFFSET,
+                VESPERIA_FIRST_PC_OFFSET_PS3
+                + index * VESPERIA_PC_BLOCK_SIZE
+                + VESPERIA_TITLE_BITFIELD_OFFSET
+                + VESPERIA_TITLE_BITFIELD_SIZE,
+            )
+        )
     )
     for index in range(VESPERIA_NUM_CHARACTERS)
 )
@@ -185,40 +196,43 @@ VESPERIA_PC_DLC_ITEM_CHECK_OFFSET = VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET + VESPERI
 VESPERIA_DLC_ITEM_CHECK_STRIDE = 64
 
 
+# START Replace Offset Table populate
 REPLACE_OFFSET_TABLE: dict[ConvertFormat, list[ReplaceMap]] = {
-    ConvertFormat(SaveFormat.PS3, SaveFormat.PC): [
+    PS3_TO_PC_CONVERT_FORMAT: [
         # Replaces the PS3 save header with a working PC save
         # Replace the save block filesize from the PS3 file which is big-endian: 00 0C CA A0 = 838304 bytes
         # With the PC save block size in little-endian: B0 CA 0C 00 = 838320 bytes
         ReplaceMap(
-            source_range=Range(0x0C, 0x10),
-            replace_func=get_replace_range_bytes(bytes([0xB0, 0xCA, 0x0C, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x0C, 0x10), output_bytes=bytes([0xB0, 0xCA, 0x0C, 0x00])
+            ),
         ),
         # The date value is stored as a 64-bit seconds since the epoch value (1970-01-01)
         # https://docs.python.org/3/library/datetime.html#datetime.datetime.timestamp
         # Additional info: Playtime is stored 1/60 seconds at offset 0x14,
         # Gald is stored at offset 0x20
         ReplaceMap(
-            source_range=Range(0x18, 0x20),
-            replace_func=get_replace_endian_swap(swap_size=EndianSwapSize.Size64Bit),
+            replace_functor=ReplaceEndianSwap(source_range=Range(0x18, 0x20), swap_size=EndianSwapSize.Size64Bit),
         ),
         # Skip swapping the "TO8SAVE" magic bytes
-        ReplaceMap(source_range=Range(0x228, 0x230), replace_func=replace_copy),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0x228, 0x230))),
         # According to HyoutaTools SaveData research:
         # https://github.com/AdmiralCurtiss/HyoutaTools/blob/33f1e42a6efc5c386c654656c2b21991d58fdedb/HyoutaToolsLib/Tales/Vesperia/SaveData/SaveData.cs#L42
         # This offset contains the size of the save data minus the header 552 (0x228).
         # The PC Save size should be (838872 - 552) = 838320 (in little endian)
         # On PS3 this value is set to 838304 (big endian)
         ReplaceMap(
-            source_range=Range(0x230, 0x234),
-            replace_func=get_replace_range_bytes(bytes([0xB0, 0xCA, 0x0C, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x230, 0x234), output_bytes=bytes([0xB0, 0xCA, 0x0C, 0x00])
+            ),
         ),
         # Offset where reference strings start in the Save Data
         # Needs to be increased by 0x10 hex to account for the added bytes from PS3 to PC
         # https://github.com/AdmiralCurtiss/HyoutaTools/blob/33f1e42a6efc5c386c654656c2b21991d58fdedb/HyoutaToolsLib/Tales/Vesperia/SaveData/SaveData.cs#L47
         ReplaceMap(
-            source_range=Range(0x254, 0x258),
-            replace_func=get_replace_range_bytes(bytes([0xA0, 0xC9, 0x0C, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x254, 0x258), output_bytes=bytes([0xA0, 0xC9, 0x0C, 0x00])
+            ),
         ),
         # The offset of the section data start is located at 0x250 in the file (The value is always 0x400).
         # Therefore data starts at 0x628(0x228 header + 0x400)
@@ -249,129 +263,142 @@ REPLACE_OFFSET_TABLE: dict[ConvertFormat, list[ReplaceMap]] = {
         # Starts at offset (PC file:0x628 + 12944 = 0x38B8, PS3 file:0x628 + 12928 = 0x38A8
         #                   PC save:0x400 + 12944 = 0x3690, PS3 save:0x400 + 12928 = 0x3680
         ReplaceMap(
-            source_range=Range(0x44C, 0x450),
-            replace_func=get_replace_range_bytes(bytes([0x90, 0x32, 0x00, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x44C, 0x450), output_bytes=bytes([0x90, 0x32, 0x00, 0x00])
+            ),
         ),
         # SavePoint block size = 1024
         # Starts at offset (PC file:0x628 + 13488 = 0x3AD8, PS3 file:0x628 + 13472 = 0x3AC8
         #                   PC save:0x400 + 13488 = 0x38B0, PS3 save:0x400 + 13472 = 0x38A0
         ReplaceMap(
-            source_range=Range(0x46C, 0x470),
-            replace_func=get_replace_range_bytes(bytes([0xB0, 0x34, 0x00, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x46C, 0x470), output_bytes=bytes([0xB0, 0x34, 0x00, 0x00])
+            ),
         ),
         # MG2Poker block size = 128
         # Starts at offset (PC file:0x628 + 14512 = 0x3ED8, PS3 file:0x628 + 14496 = 0x3EC8
         #                   PC save:0x400 + 14512 = 0x3CB0, PS3 save:0x400 + 14496 = 0x3CA0)
         ReplaceMap(
-            source_range=Range(0x48C, 0x490),
-            replace_func=get_replace_range_bytes(bytes([0xB0, 0x38, 0x00, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x48C, 0x490), output_bytes=bytes([0xB0, 0x38, 0x00, 0x00])
+            ),
         ),
         # SnowBoard block size = 655360
         # Starts at offset (PC file:0x628 + 14640 = 0x3F58, PS3 file:0x628 + 14624 = 0x3F48
         #                   PC save:0x400 + 14640 = 0x3D30, PS3 save:0x400 + 14624 = 0x3D20
         ReplaceMap(
-            source_range=Range(0x4AC, 0x4B0),
-            replace_func=get_replace_range_bytes(bytes([0x30, 0x39, 0x00, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x4AC, 0x4B0), output_bytes=bytes([0x30, 0x39, 0x00, 0x00])
+            ),
         ),
         # PARTY_DATA block size = 18904
         # Starts at offset (PC file:0x628 + 670000 = 0xA3F58, PS3 file:0x628 + 669984 = 0xA3F48
         #                   PC save:0x400 + 670000 = 0xA3D30, PS3 save:0x400 + 669984 = 0xA3D20
         ReplaceMap(
-            source_range=Range(0x4CC, 0x4D0),
-            replace_func=get_replace_range_bytes(bytes([0x30, 0x39, 0x0A, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x4CC, 0x4D0), output_bytes=bytes([0x30, 0x39, 0x0A, 0x00])
+            ),
         ),
         # PC_STATUS1 block size = 16400
         # Starts at offset (PC file:0x628 + 688912 = 0xA8938, PS3 file:0x628 + 688896 = 0xA8928
         #                   PC save:0x400 + 688912 = 0xA8710, PS3 save:0x400 + 688896 = 0xA8700
         ReplaceMap(
-            source_range=Range(0x4EC, 0x4F0),
-            replace_func=get_replace_range_bytes(bytes([0x10, 0x83, 0x0A, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x4EC, 0x4F0), output_bytes=bytes([0x10, 0x83, 0x0A, 0x00])
+            ),
         ),
         # PC_STATUS2 block size = 16400
         # Starts at offset (PC file:0x628 + 705312 = 0xAC948, PS3 file:0x628 + 705296 = 0xAC938
         #                   PC save:0x400 + 705312 = 0xAC720, PS3 save:0x400 + 705296 = 0xAC710
         ReplaceMap(
-            source_range=Range(0x50C, 0x510),
-            replace_func=get_replace_range_bytes(bytes([0x20, 0xC3, 0x0A, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x50C, 0x510), output_bytes=bytes([0x20, 0xC3, 0x0A, 0x00])
+            ),
         ),
         # PC_STATUS3 block size = 16400
         # Starts at offset (PC file:0x628 + 721712 = 0xB0958, PS3 file:0x628 + 721696 = 0xB0948
         #                   PC save:0x400 + 721712 = 0xB0730, PS3 save:0x400 + 721696 = 0xB0720
         ReplaceMap(
-            source_range=Range(0x52C, 0x530),
-            replace_func=get_replace_range_bytes(bytes([0x30, 0x03, 0x0B, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x52C, 0x530), output_bytes=bytes([0x30, 0x03, 0x0B, 0x00])
+            ),
         ),
         # PC_STATUS4 block size = 16400
         # Starts at offset (PC file:0x628 + 738112 = 0xB4968, PS3 file:0x628 + 738096 = 0xB4958
         #                   PC save:0x400 + 738112 = 0xB4740, PS3 save:0x400 + 738096 = 0xB4730
         ReplaceMap(
-            source_range=Range(0x54C, 0x550),
-            replace_func=get_replace_range_bytes(bytes([0x40, 0x43, 0x0B, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x54C, 0x550), output_bytes=bytes([0x40, 0x43, 0x0B, 0x00])
+            ),
         ),
         # PC_STATUS5 block size = 16400
         # Starts at offset (PC file:0x628 + 754512 = 0xB8978, PS3 file:0x628 + 754496 = 0xB8968
         #                   PC save:0x400 + 754512 = 0xB8750, PS3 save:0x400 + 754496 = 0xB8740
         ReplaceMap(
-            source_range=Range(0x56C, 0x570),
-            replace_func=get_replace_range_bytes(bytes([0x50, 0x83, 0x0B, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x56C, 0x570), output_bytes=bytes([0x50, 0x83, 0x0B, 0x00])
+            ),
         ),
         # PC_STATUS6 block size = 16400
         # Starts at offset (PC file:0x628 + 770912 = 0xBC988, PS3 file:0x628 + 770896 = 0xBC978
         #                   PC save:0x400 + 770912 = 0xBC760, PS3 save:0x400 + 770896 = 0xBC750
         ReplaceMap(
-            source_range=Range(0x58C, 0x590),
-            replace_func=get_replace_range_bytes(bytes([0x60, 0xC3, 0x0B, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x58C, 0x590), output_bytes=bytes([0x60, 0xC3, 0x0B, 0x00])
+            ),
         ),
         # PC_STATUS7 block size = 16400
         # Starts at offset (PC file:0x628 + 787312 = 0xC0998, PS3 file:0x628 + 787296 = 0xC0988
         #                   PC save:0x400 + 787312 = 0xC0770, PS3 save:0x400 + 787296 = 0xC0760
         ReplaceMap(
-            source_range=Range(0x5AC, 0x5B0),
-            replace_func=get_replace_range_bytes(bytes([0x70, 0x03, 0x0C, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x5AC, 0x5B0), output_bytes=bytes([0x70, 0x03, 0x0C, 0x00])
+            ),
         ),
         # PC_STATUS8 block size = 16400
         # Starts at offset (PC file:0x628 + 803712 = 0xC49A8, PS3 file:0x628 + 803696 = 0xC4998
         #                   PC save:0x400 + 803712 = 0xC4780, PS3 save:0x400 + 803696 = 0xC4770
         ReplaceMap(
-            source_range=Range(0x5CC, 0x5D0),
-            replace_func=get_replace_range_bytes(bytes([0x80, 0x43, 0x0C, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x5CC, 0x5D0), output_bytes=bytes([0x80, 0x43, 0x0C, 0x00])
+            ),
         ),
         # PC_STATUS9 block size = 16400
         # Starts at offset (PC file:0x628 + 820112 = 0xC89B8, PS3 file:0x628 + 820096 = 0xC89A8
         #                   PC save:0x400 + 820112 = 0xC8790, PS3 save:0x400 + 820096 = 0xC8780
         ReplaceMap(
-            source_range=Range(0x5EC, 0x5F0),
-            replace_func=get_replace_range_bytes(bytes([0x90, 0x83, 0x0C, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x5EC, 0x5F0), output_bytes=bytes([0x90, 0x83, 0x0C, 0x00])
+            ),
         ),
         # FieldGadget block size = 512
         # Starts at offset (PC file:0x628 + 836512 = 0xCC9C8, PS3 file:0x628 + 836496 = 0xCC9B8
         #                   PC save:0x400 + 836512 = 0xCC7A0, PS3 save:0x400 + 836496 = 0xCC790
         ReplaceMap(
-            source_range=Range(0x60C, 0x610),
-            replace_func=get_replace_range_bytes(bytes([0xA0, 0xC3, 0x0C, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x60C, 0x610), output_bytes=bytes([0xA0, 0xC3, 0x0C, 0x00])
+            ),
         ),
         # Map location is a string, so don't swap it
-        ReplaceMap(source_range=Range(0x668, 0x670), replace_func=replace_copy),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0x668, 0x670))),
         # Weather condition is a string
-        ReplaceMap(source_range=Range(0x688, 0x690), replace_func=replace_copy),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0x688, 0x690))),
         # Another string that is set "default"
-        ReplaceMap(source_range=Range(0xC30, 0xC38), replace_func=replace_copy),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0xC30, 0xC38))),
         # The data here appears to be packed tightly without swaps
-        ReplaceMap(source_range=Range(0x1728, 0x1828), replace_func=replace_copy),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0x1728, 0x1828))),
         # The Field Camera and Field Areas sections appear to only contain string data
-        ReplaceMap(source_range=Range(0x1A90, 0x1F00), replace_func=replace_copy),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0x1A90, 0x1F00))),
         # Insert 16 bytes at the end of the CUSTOM_DATA section to align the Sound Theater data on PC at
         # The PS3 input offset would be at 0x38A8
         ReplaceMap(
-            source_range=Range(0x38A8, 0x38A8),
-            replace_func=get_replace_range_bytes(bytes([0x0] * 16)),
+            replace_functor=ReplaceRangeBytes(source_range=Range(0x38A8, 0x38A8), output_bytes=bytes([0x0] * 16)),
         ),
         # SavePoint data should not be endian swapped
-        ReplaceMap(source_range=Range(0x3AC8, 0x3AC8 + 1024), replace_func=replace_copy),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0x3AC8, 0x3AC8 + 1024))),
         # Custom Battle Strategy names are strings
         ReplaceMap(
-            source_range=Range(0xA7160, 0xA7160 + 0x40 * 8),
-            replace_func=replace_copy,
+            replace_functor=ReplaceCopy(source_range=Range(0xA7160, 0xA7160 + 0x40 * 8)),
         ),
         # Copy any custom character names without endian swaps
         *VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET_RANGES,
@@ -379,138 +406,159 @@ REPLACE_OFFSET_TABLE: dict[ConvertFormat, list[ReplaceMap]] = {
         *VESPERIA_CHARACTER_OBTAINED_TITLE_OFFSET_RANGES,
         # Section Name data at the end of the save are strings
         ReplaceMap(
-            source_range=Range(0xCCBB8, 0xCCCC8),
-            replace_func=replace_copy,
+            replace_functor=ReplaceCopy(source_range=Range(0xCCBB8, 0xCCCC8)),
         ),
     ],
     ## Create reverse entry of PC -> PS3 conversion for vesperia
-    ConvertFormat(SaveFormat.PC, SaveFormat.PS3): [
+    PC_TO_PS3_CONVERT_FORMAT: [
         ReplaceMap(
-            source_range=Range(0x0C, 0x10),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0C, 0xCA, 0xA0])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x0C, 0x10), output_bytes=bytes([0x00, 0x0C, 0xCA, 0xA0])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x18, 0x20),
-            replace_func=get_replace_endian_swap(swap_size=EndianSwapSize.Size64Bit),
+            replace_functor=ReplaceEndianSwap(source_range=Range(0x18, 0x20), swap_size=EndianSwapSize.Size64Bit),
         ),
-        ReplaceMap(source_range=Range(0x228, 0x230), replace_func=replace_copy),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0x228, 0x230))),
         ReplaceMap(
-            source_range=Range(0x230, 0x234),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0C, 0xCA, 0xA0])),
-        ),
-        ReplaceMap(
-            source_range=Range(0x254, 0x258),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0C, 0xC9, 0x90])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x230, 0x234), output_bytes=bytes([0x00, 0x0C, 0xCA, 0xA0])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x44C, 0x450),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x00, 0x32, 0x80])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x254, 0x258), output_bytes=bytes([0x00, 0x0C, 0xC9, 0x90])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x46C, 0x470),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x00, 0x34, 0xA0])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x44C, 0x450), output_bytes=bytes([0x00, 0x00, 0x32, 0x80])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x48C, 0x490),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x00, 0x38, 0xA0])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x46C, 0x470), output_bytes=bytes([0x00, 0x00, 0x34, 0xA0])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x4AC, 0x4B0),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x00, 0x39, 0x20])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x48C, 0x490), output_bytes=bytes([0x00, 0x00, 0x38, 0xA0])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x4CC, 0x4D0),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0A, 0x39, 0x20])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x4AC, 0x4B0), output_bytes=bytes([0x00, 0x00, 0x39, 0x20])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x4EC, 0x4F0),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0A, 0x83, 0x00])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x4CC, 0x4D0), output_bytes=bytes([0x00, 0x0A, 0x39, 0x20])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x50C, 0x510),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0A, 0xC3, 0x10])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x4EC, 0x4F0), output_bytes=bytes([0x00, 0x0A, 0x83, 0x00])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x52C, 0x530),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0B, 0x03, 0x20])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x50C, 0x510), output_bytes=bytes([0x00, 0x0A, 0xC3, 0x10])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x54C, 0x550),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0B, 0x43, 0x30])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x52C, 0x530), output_bytes=bytes([0x00, 0x0B, 0x03, 0x20])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x56C, 0x570),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0B, 0x83, 0x40])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x54C, 0x550), output_bytes=bytes([0x00, 0x0B, 0x43, 0x30])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x58C, 0x590),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0B, 0xC3, 0x50])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x56C, 0x570), output_bytes=bytes([0x00, 0x0B, 0x83, 0x40])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x5AC, 0x5B0),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0C, 0x03, 0x60])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x58C, 0x590), output_bytes=bytes([0x00, 0x0B, 0xC3, 0x50])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x5CC, 0x5D0),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0C, 0x43, 0x70])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x5AC, 0x5B0), output_bytes=bytes([0x00, 0x0C, 0x03, 0x60])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x5EC, 0x5F0),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0C, 0x83, 0x80])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x5CC, 0x5D0), output_bytes=bytes([0x00, 0x0C, 0x43, 0x70])
+            ),
         ),
         ReplaceMap(
-            source_range=Range(0x60C, 0x610),
-            replace_func=get_replace_range_bytes(bytes([0x00, 0x0C, 0xC3, 0x90])),
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x5EC, 0x5F0), output_bytes=bytes([0x00, 0x0C, 0x83, 0x80])
+            ),
         ),
-        ReplaceMap(source_range=Range(0x668, 0x670), replace_func=replace_copy),
-        ReplaceMap(source_range=Range(0x688, 0x690), replace_func=replace_copy),
-        ReplaceMap(source_range=Range(0xC30, 0xC38), replace_func=replace_copy),
-        ReplaceMap(source_range=Range(0x1728, 0x1828), replace_func=replace_copy),
-        ReplaceMap(source_range=Range(0x1A90, 0x1F00), replace_func=replace_copy),
+        ReplaceMap(
+            replace_functor=ReplaceRangeBytes(
+                source_range=Range(0x60C, 0x610), output_bytes=bytes([0x00, 0x0C, 0xC3, 0x90])
+            ),
+        ),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0x668, 0x670))),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0x688, 0x690))),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0xC30, 0xC38))),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0x1728, 0x1828))),
+        ReplaceMap(replace_functor=ReplaceCopy(source_range=Range(0x1A90, 0x1F00))),
         # Delete 16 bytes at the end of the CUSTOM_DATA block
         # The PS3 input offset would be at 0x38A8
         ReplaceMap(
-            source_range=Range(0x38A8, 0x38B8),
-            replace_func=get_replace_range_bytes(b""),
+            replace_functor=ReplaceRangeBytes(source_range=Range(0x38A8, 0x38B8), output_bytes=b""),
         ),
         #### Any source_range after this point requires 0x10 to be added to translated from the PC offset.
         ReplaceMap(
-            source_range=Range(
-                0x3AC8 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
-                0x3AC8 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET + 1024,
+            replace_functor=ReplaceCopy(
+                source_range=Range(
+                    0x3AC8 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
+                    0x3AC8 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET + 1024,
+                )
             ),
-            replace_func=replace_copy,
         ),
         ReplaceMap(
-            source_range=Range(
-                0xA7160 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
-                0xA7160 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET + 0x40 * 8,
+            replace_functor=ReplaceCopy(
+                source_range=Range(
+                    0xA7160 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
+                    0xA7160 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET + 0x40 * 8,
+                )
             ),
-            replace_func=replace_copy,
-        ),
-        *[
-            ReplaceMap(
-                source_range=char_name_replace_entry.source_range + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
-                replace_func=char_name_replace_entry.replace_func,
-            )
-            for char_name_replace_entry in VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET_RANGES
-        ],
-        *[
-            ReplaceMap(
-                source_range=char_name_replace_entry.source_range + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
-                replace_func=char_name_replace_entry.replace_func,
-            )
-            for char_name_replace_entry in VESPERIA_CHARACTER_OBTAINED_TITLE_OFFSET_RANGES
-        ],
-        ReplaceMap(
-            source_range=Range(
-                0xCCBB8 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
-                0xCCCC8 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
-            ),
-            replace_func=replace_copy,
         ),
     ],
 }
+
+for char_name_replace_entry in VESPERIA_CUSTOM_CHARACTER_NAME_OFFSET_RANGES:
+    new_functor = deepcopy(char_name_replace_entry.replace_functor)
+    new_functor.source_range = (
+        char_name_replace_entry.replace_functor.source_range + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET
+    )
+    REPLACE_OFFSET_TABLE[PC_TO_PS3_CONVERT_FORMAT].append(ReplaceMap(replace_functor=new_functor))
+for char_name_replace_entry in VESPERIA_CHARACTER_OBTAINED_TITLE_OFFSET_RANGES:
+    new_functor = deepcopy(char_name_replace_entry.replace_functor)
+    new_functor.source_range = (
+        char_name_replace_entry.replace_functor.source_range + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET
+    )
+    REPLACE_OFFSET_TABLE[PC_TO_PS3_CONVERT_FORMAT].append(ReplaceMap(replace_functor=new_functor))
+
+REPLACE_OFFSET_TABLE[PC_TO_PS3_CONVERT_FORMAT].append(
+    ReplaceMap(
+        replace_functor=ReplaceCopy(
+            source_range=Range(
+                0xCCBB8 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
+                0xCCCC8 + VESPERIA_PC_TO_PS3_POST_CUSTOM_DATA_OFFSET,
+            )
+        ),
+    )
+)
+# END Replace Offset Table populate
 
 
 def create_replace_offset_dict(convert_format: ConvertFormat, patch_dlc_item_checks: bool) -> list[ReplaceMap]:
@@ -522,7 +570,7 @@ def create_replace_offset_dict(convert_format: ConvertFormat, patch_dlc_item_che
     """
     game_replace_table: list[ReplaceMap] = sorted(
         REPLACE_OFFSET_TABLE.get(convert_format, []),
-        key=lambda entry: (entry.source_range.start, entry.source_range.end),
+        key=lambda entry: (entry.replace_functor.source_range.start, entry.replace_functor.source_range.end),
     )
 
     ## Add the dlc item check patch range entry
@@ -536,8 +584,10 @@ def create_replace_offset_dict(convert_format: ConvertFormat, patch_dlc_item_che
         bisect.insort(
             game_replace_table,
             ReplaceMap(
-                source_range=Range(dlc_check_start, dlc_check_start + VESPERIA_DLC_ITEM_CHECK_STRIDE),
-                replace_func=get_replace_range_bytes(bytes(VESPERIA_DLC_ITEM_CHECK_STRIDE)),
+                replace_functor=ReplaceRangeBytes(
+                    source_range=Range(dlc_check_start, dlc_check_start + VESPERIA_DLC_ITEM_CHECK_STRIDE),
+                    output_bytes=bytes(VESPERIA_DLC_ITEM_CHECK_STRIDE),
+                )
             ),
         )
 
@@ -545,13 +595,13 @@ def create_replace_offset_dict(convert_format: ConvertFormat, patch_dlc_item_che
     if convert_format.source == SaveFormat.PS3 and convert_format.target != SaveFormat.PS3:
         game_replace_table = fill_replace_func_in_offset_range_gaps(
             game_replace_table,
-            fill_replace_func=get_replace_endian_swap(swap_size=EndianSwapSize.Size32Bit),
+            fill_replace_functor=ReplaceEndianSwap(source_range=Range(), swap_size=EndianSwapSize.Size32Bit),
             max_offset=VESPERIA_PS3_SAVE_SIZE,
         )
     elif convert_format.source != SaveFormat.PS3 and convert_format.target == SaveFormat.PS3:
         game_replace_table = fill_replace_func_in_offset_range_gaps(
             game_replace_table,
-            fill_replace_func=get_replace_endian_swap(swap_size=EndianSwapSize.Size32Bit),
+            fill_replace_functor=ReplaceEndianSwap(source_range=Range(), swap_size=EndianSwapSize.Size32Bit),
             max_offset=VESPERIA_PC_SAVE_SIZE,
         )
 
@@ -560,13 +610,16 @@ def create_replace_offset_dict(convert_format: ConvertFormat, patch_dlc_item_che
 
     error_message = ""
     prev_value: ReplaceMap = game_replace_table[0]
-    if prev_value.source_range.start != 0:
-        error_message += f"First range entry must start at offset 0x0. It is {prev_value.source_range.start}\n"
+    if prev_value.replace_functor.source_range.start != 0:
+        error_message += (
+            f"First range entry must start at offset 0x0. It is {prev_value.replace_functor.source_range.start}\n"
+        )
     for value in game_replace_table[1:]:
-        if prev_value.source_range.end != value.source_range.start:
+        if prev_value.replace_functor.source_range.end != value.replace_functor.source_range.start:
             error_message += (
                 "The previous range entry end offset must be equal to the current range entry start offset."
-                f"Previous entry: {prev_value.source_range.end}, Current entry {value.source_range.start}.\n"
+                f"Previous entry: {prev_value.replace_functor.source_range.end},"
+                f" Current entry {value.replace_functor.source_range.start}.\n"
             )
         prev_value = value
 
@@ -576,9 +629,9 @@ def create_replace_offset_dict(convert_format: ConvertFormat, patch_dlc_item_che
         input_save_size = VESPERIA_PC_SAVE_SIZE
     else:
         raise ValueError(f"Source convert format {convert_format.source} does not have known save size. Aborting...")
-    if game_replace_table[-1].source_range.end < input_save_size:
+    if game_replace_table[-1].replace_functor.source_range.end < input_save_size:
         error_message += f"The last range entry end offset must be at least {input_save_size:x}."
-        f" It is {game_replace_table[-1].source_range.end}\n"
+        f" It is {game_replace_table[-1].replace_functor.source_range.end}\n"
 
     if error_message:
         raise RangeNotCoveredException(error_message)
@@ -618,20 +671,19 @@ def process_input_savedata(
             replace_set,
             offset,
             lo=replace_start_index,
-            key=lambda entry: entry.source_range.start,
+            key=lambda entry: entry.replace_functor.source_range.start,
         )
 
-        if lower_bound != len(replace_set) and replace_set[lower_bound].source_range.start == offset:
+        if lower_bound != len(replace_set) and replace_set[lower_bound].replace_functor.source_range.start == offset:
             # If the offset is exactly equal to the lower_bound start offset, use that entry
             replace_index = lower_bound
         elif lower_bound > 0:
             # Otherwise check if the previous index replace entry end offset is >= offset
-            if replace_set[lower_bound - 1].source_range.end >= offset:
+            if replace_set[lower_bound - 1].replace_functor.source_range.end >= offset:
                 replace_index = lower_bound - 1
 
     if replace_index != -1:
-        source_range = replace_set[replace_index].source_range
-        output_result = replace_set[replace_index].replace_func(input_data, offset, source_range, convert_format)
+        output_result = replace_set[replace_index].replace_functor(input_data, offset, convert_format)
         return output_result
 
     return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
@@ -735,19 +787,20 @@ def start_convert(args: argparse.Namespace):
 
 
 def add_commands(parser: argparse.ArgumentParser) -> None:
+    parser.description = "Save Converter (PS3<->PC) for Tales of Vesperia"
     # Add general connection arguments
     parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
         "--input",
         "-i",
         type=pathlib.Path,
-        help="Input path to PS3 Save file",
+        help="Input path to save file",
         required=True,
     )
     parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
         "--output",
         "-o",
         type=pathlib.Path,
-        help="Output path to PC Save file. Defaults to <input-file-path>.pc if not specified",
+        help="Output path to save file. Defaults to <input-file-path>.<target-format> if not specified",
     )
 
     class ConvertFormatAction(argparse.Action):
@@ -765,9 +818,9 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
             options_string: str | None = None,
         ):
             if values == "ps3-to-pc":
-                setattr(namespace, self.dest, VESPERIA_PS3_TO_PC_FORMAT)
+                setattr(namespace, self.dest, PS3_TO_PC_CONVERT_FORMAT)
             elif values == "pc-to-ps3":
-                setattr(namespace, self.dest, VESPERIA_PC_TO_PS3_FORMAT)
+                setattr(namespace, self.dest, PC_TO_PS3_CONVERT_FORMAT)
             else:
                 raise ValueError(f"Value {values} is not an appropriate choice for argument {options_string}")
 
@@ -775,8 +828,8 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
         "--convert-format",
         "-f",
         action=ConvertFormatAction,
-        choices=["ps3-to-pc", "pc-to-ps3"],
-        default=VESPERIA_PS3_TO_PC_FORMAT,
+        choices=[str(PS3_TO_PC_CONVERT_FORMAT), str(PC_TO_PS3_CONVERT_FORMAT)],
+        default=PS3_TO_PC_CONVERT_FORMAT,
         help="Specifies the input file save format and what should the output file format should be."
         " Only PS3 and PC supported at this time",
     )

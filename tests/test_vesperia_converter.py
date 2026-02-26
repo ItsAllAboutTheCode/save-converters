@@ -19,7 +19,7 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 
 class TestConvertVesperiaSave(TestCase):
     def setUp(self):
-        self.test_filepath: Path = Path(SCRIPT_DIR) / "test_files"
+        self.test_filepath: Path = Path(SCRIPT_DIR) / "test_files/vesperia"
 
     def test_round_trip_conversion(self):
         test_file = self.test_filepath / "SAVE.ps3"
@@ -61,7 +61,7 @@ class TestConvertVesperiaSave(TestCase):
 
             self.assertTrue(start_convert(test_args))
             self.assertEqual(len(test_bytes), VESPERIA_PC_SAVE_SIZE)
-            # Now convert from PC save back to PC save
+            # Now convert from PC save back to PS3 save
             pc_converted_bytes = test_bytes.copy()
             test_bytes.clear()
 
