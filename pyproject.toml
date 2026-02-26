@@ -104,3 +104,9 @@ lint.select = [
 ]
 
 lint.ignore = ["D", "INP001"]
+
+[tool.basedpyright]
+# Disabling some annoying pyright reports that is not important to program correctness
+reportImplicitStringConcatenation = false # Ignores implicit string concatenation across multiple lines
+reportExplicitAny = false # Ignores when a parameter is explicitly marked as Any
+reportAny = false # Ignores when a parameter is marked as Any
