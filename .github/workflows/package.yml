@@ -32,14 +32,46 @@ jobs:
           uv sync
       - name: Build package using hatch
         run: |
-          . .venv/bin/activate
-          hatch build -t custom
-          printf 'ARTIFACT_NAME=%s\n' $(find dist/ -maxdepth 1 -type f -name '*.zip' -printf '%f\n') >> ${GITHUB_ENV}
+          uv run hatch build -t custom
+      - name: Get artifact zip path (Linux and macOS)
+        if: ${{ contains(fromJson('["Linux", "macOS"]'), runner.os) }}
+        run: |
+          python -c '
+          from pathlib import Path
+          import sys
+          if len(sys.argv) < 2:
+             print("Github ENV file is missing", file=sys.stderr)
+             sys.exit(1)
+          dist_dir = Path("dist/")
+          artifact_paths = sorted(dist_dir.glob("*.zip"))
+          artifact_env_string = "\n".join([f"ARTIFACT_PATH={artifact_path}\nARTIFACT_NAME={artifact_path.name}"
+            for artifact_path in artifact_paths])
+          github_env_path = Path(sys.argv[1])
+          with github_env_path.open("a") as env_file:
+            env_file.write(f"{artifact_env_string}\n")
+          ' ${GITHUB_ENV}
+      - name: Get artifact zip path (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        run: |
+          python -c '
+          from pathlib import Path
+          import sys
+          if len(sys.argv) < 2:
+             print("Github ENV file is missing", file=sys.stderr)
+             sys.exit(1)
+          dist_dir = Path("dist/")
+          artifact_paths = sorted(dist_dir.glob("*.zip"))
+          artifact_env_string = "\n".join([f"ARTIFACT_PATH={artifact_path}\nARTIFACT_NAME={artifact_path.name}"
+            for artifact_path in artifact_paths])
+          github_env_path = Path(sys.argv[1])
+          with github_env_path.open("a") as env_file:
+            env_file.write(f"{artifact_env_string}\n")
+          ' $Env:GITHUB_ENV
       - name: Upload ${{ runner.os }} pyinstaller zip
         uses: actions/upload-artifact@v6
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: dist/*.zip
+          path: ${{ env.ARTIFACT_PATH }}
           compression-level: 0
           retention-days: 1
 
@@ -53,7 +85,7 @@ jobs:
           tags=$(gh api \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            /repos/OWNER/REPO/tag \
+            /repos/${{ github.repository }}/tags \
             | jq -r '.[].name')
            previous_tag=$(echo "$tags" | sort -V | tail -n 2 | head -n 1)
            echo ${previous_tag}
