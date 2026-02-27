@@ -30,7 +30,7 @@ lint = [
 
 [dependency-groups]
 dev = [
-    "hatch>=1.16.3",
+    "hatch>=1.16.5",
     "pyinstaller>=6.19.0",
 ]
 
