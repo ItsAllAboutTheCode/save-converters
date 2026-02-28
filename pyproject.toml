@@ -81,12 +81,12 @@ dependencies = [
 lint = [
   "ruff format",
   "ruff check --output-format=full --fix --show-fixes",
-  "python -m unittest tests",
+  "python -m unittest discover tests",
 ]
 lint-action = [
   "ruff format --check --diff",
   "ruff check --output-format=github",
-  "python -m unittest tests",
+  "python -m unittest discover tests",
 ]
 
 

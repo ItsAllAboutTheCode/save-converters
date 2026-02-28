@@ -57,7 +57,7 @@ It is recommend to add at a test for any new save converter.
 ## Running tests
 Test can be run using either of the following commands:
 - `hatch env run -e lint lint`
-- or  `python -m unittest tests`
+- or  `python -m unittest discover tests`
 
 ## Project Configuration files
 The project uses a [pyproject.toml](./pyproject.toml) file for configuration.  
