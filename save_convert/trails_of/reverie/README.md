@@ -21,4 +21,4 @@ python save_converter.py trails-into-reverie --convert-format=pc-to-ps4 -i <path
 ```
 
 ## Credits
-AdmiralCurtiss [HyoutaTools](https://github.com/AdmiralCurtiss/SenPatcher) repo - For the Type 1 Decompression algorithm
+AdmiralCurtiss [SenPatcher](https://github.com/AdmiralCurtiss/SenPatcher) repo - For the Type 1 Decompression algorithm

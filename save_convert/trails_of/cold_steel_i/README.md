@@ -24,4 +24,4 @@ python save_converter.py trails-of-cold-steel-i --convert-format=pc-to-ps4 -i <p
 Research notes for save conversion is detailed in the [save_NOTES.md](./save_NOTES.md)
 
 ## Credits
-AdmiralCurtiss [HyoutaTools](https://github.com/AdmiralCurtiss/SenPatcher) repo - For the Type 1 Decompression algorithm
+AdmiralCurtiss [SenPatcher](https://github.com/AdmiralCurtiss/SenPatcher) repo - For the Type 1 Decompression algorithm
