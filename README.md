@@ -19,25 +19,28 @@ Scripts converters are supported for the following games:
 
 ## Contributors Notes
 
-To register a new converter the following steps can be performed:  
-
-1. Create a new python module that implements the save conversion between formats
-1. Add a `def add_commands(parser: argparse.ArgumentParser)` method within the converter to register a subparser to invoke the converter command
-1. Inside the `add_commands` method use the `parser.set_defaults(func=<name-of-function-to-perform-conversion>)` to register a hook function that performs the save conversion
-1. Add the absolute module path to the new python module in [](save_convert/__init__.py) to the `converter_modules` dictionary.  
-   Ex. `converter_modules["game_name"]: "save_convert.path.to.module",`
+See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ### Running static analysis
 Static analysis can be run locally using the `hatch` build tool
 #### Check static analysis
 ```bash
-hatch env run -e lint lint
-```
-#### Fix lint actions
-```bash
 hatch env run -e lint lint-action
+```
+#### Fix lint issues
+```bash
+hatch env run -e lint lint
 ```
 
 
 ## Requirements
-[Python 3.14+](https://docs.python.org/3/whatsnew/3.14.html#pep-784-zstandard-support-in-the-standard-library) is needed for access to the Zstandard module.  
+### Running PyInstaller executable
+If running the executable generated from using `PyInstaller` tool, then a specific version of Python is not required.  
+All the executables on the [Releases](https://github.com/ItsAllAboutTheCode/save-converters/releases) page are built using `PyInstaller`.
+
+### Running Python script directly
+`Trails` save converter requirements: Python 3.14\+
+* This is needed for access to the [Zstandard](https://docs.python.org/3/whatsnew/3.14.html#pep-784-zstandard-support-in-the-standard-library) module.  
+
+`Tales of Vesperia` save converter requirements: Python 3.12\+
+
