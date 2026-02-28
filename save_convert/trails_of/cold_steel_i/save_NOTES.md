@@ -9,8 +9,8 @@ Prereq: The PS4 needs to be to be jailbroken
 Prereq: Need SenPatcher from https://github.com/AdmiralCurtiss/SenPatcher/releases
 1. Use the SenPatcher to decompress 'Type 1' save.
    1. This can be done either using the SenPatcher GUI via the Toolbox menu or...
-   1. Run the SenPatcher.exe(Windows) or sentools(Linux) on a CLI with the `Type1.Decompress` option
-E.g `sentools Type1.Decompress <path-user.dat>`
+   1. Run the SenPatcher.exe(Windows) or sentools(Linux) on a CLI with the `Type1.Decompress` option.  
+      E.g `sentools Type1.Decompress <path-user.dat>`
 
 
 *Note: PC Saves are stored in `%USERPROFILE%\Saved Games\Falcom\ed8`*
@@ -164,30 +164,30 @@ Reminder that deleting bytes earlier in the file affects the offsets that are la
 1. Offset 0x6B204 - Delete 764 bytes - Playtime at offset 0x6B748 should be aligned now.
 1. Offset 0x708C0 - Delete 8 bytes - Makes the converted PS4 save have the exact size of an original PC Save
 
-Total Bytes Changed PS4 -> PC:
-First Model bytes changed = (12 + 8 + 12 + 20 + 8 + 4 + 80 + 12 + 80 + 8 + 4 + 80 + 12) = 340
-Second thru Tenth Model bytes Changed = (**72** + 8 + 12 + 20 + 8 + 4 + 80 + 12 + 80 + 8 + 4 + 80 + 12) * 9 = (400 * 9) = 3600
-Total = -4 + 20 + 340 + 3600 + 53672 + 764 + 8 = 58400 total bytes reduced.
-After conversion the old PS4 save file should be the exact size of an original PC save.
+Total Bytes Changed PS4 -> PC:  
+First Model bytes changed = (12 + 8 + 12 + 20 + 8 + 4 + 80 + 12 + 80 + 8 + 4 + 80 + 12) = 340  
+Second thru Tenth Model bytes Changed = (**72** + 8 + 12 + 20 + 8 + 4 + 80 + 12 + 80 + 8 + 4 + 80 + 12) * 9 = (400 * 9) = 3600  
+Total = -4 + 20 + 340 + 3600 + 53672 + 764 + 8 = 58400 total bytes reduced.  
+After conversion the old PS4 save file should be the exact size of an original PC save.  
 
 
 ## Additional Notes:
-Mira offset = 0x65814
-Sepith Mass offset = 0x657F0
-Offset from PC to PS4 = +57628
-Playtime is stored as a double at offset 0x6B748
+Mira offset = 0x65814  
+Sepith Mass offset = 0x657F0  
+Offset from PC to PS4 = +57628  
+Playtime is stored as a double at offset 0x6B748  
 
-Additional character models offset and animation data might not be correct past the first 7 characters(If there are more than 7 characters they are usually monsters or NPCs saved on the map).
-Moving to a different map should resolve the issue.
-The Animation data also looks like it serializes pointers as part of it's data.
-As the PC version of Trails of Cold Steel 1/2 are 32-bit and the PS4 version are 64 bit, the PS4 save data is larger
+Additional character models offset and animation data might not be correct past the first 10 characters(If there are more than 10 characters they are usually monsters or NPCs saved on the map).  
+Moving to a different map should resolve the issue.  
+The Animation data also looks like it serializes pointers as part of its data.  
+As the PC version of Trails of Cold Steel 1/2 are 32-bit and the PS4 version are 64 bit, the PS4 save data is larger in some places with 8 byte values vs 4 byte values.  
 
 ### Character location/animation Data
-The player location offset is critical align to make sure the player character spawns at the correct location after load.
-That offset is at 0x2E24 in the PC version. It is made of 3 floats values for the X, Y, Z coordinates.
-The stride of the data on PC appears to be 1760 bytes and on PS4 2160 bytes.
-Therefore 400 bytes must be deleted from the PS4 save data for each character model to be aligned to the correct location.
-The most important to align is the first as that is the player character. Any issues with NPC models or monsters being in the wrong location can be resolved by switching to different map zone
+The player location offset is critical to align to make sure the player character spawns at the correct location after load.  
+That offset is at 0x2E24 in the PC version. It is made of 3 floats values for the X, Y, Z coordinates.  
+The stride of the data on PC appears to be 1760 bytes and on PS4 2160 bytes.  
+Therefore 400 bytes must be deleted from the PS4 save data for each character model to be aligned to the correct location.  
+The most important to align is the first as that is the player character. Any issues with NPC models or monsters being in the wrong location can be resolved by switching to different map zone.  
 
-There appears to be a total of up to 10 character models stored in the save file, so for the purpose of getting the save to load correctly on the PC, adjusting the location data for the first 10 models is performed.
+There appears to be a total of up to 10 character models stored in the save file, so for the purpose of getting the save to load correctly on the PC, adjusting the location data for the first 10 models is performed.  
 

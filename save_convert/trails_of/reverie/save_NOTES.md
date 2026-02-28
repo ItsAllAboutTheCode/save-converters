@@ -1,7 +1,7 @@
 # Key Notes
-The Trails of Reverie save on PS4 is compressed using the Falcom Type1 Decompression algorithm
-However on PC the save is compressed ZSTD using
-The decompressed PS4 save = 1,724,096
+The Trails of Reverie save on PS4 is compressed using the Falcom Type1 Decompression algorithm.  
+However on PC the save is compressed using Zstandard.   
+The decompressed PS4 save = 1,724,096  
 The decompressed PC save =  1,720,032
 
 The decompressed PS4 has an extra 4064 bytes.
@@ -11,12 +11,12 @@ Prereq: The PS4 needs to be to be jailbroken
 1. Use the PS4 Apollo Save Tool to copy the decrypted save to a USB stick or the /data folder.
 2. Copy user.dat file from the USB stick / use FTP to copy decrypyed save to computer.
 
-# Step to decompress PS4 save
+# Steps to decompress PS4 save
 Prereq: Need SenPatcher from https://github.com/AdmiralCurtiss/SenPatcher/releases
 1. Use the SenPatcher to decompress 'Type 1' save.
    1. This can be done either using the SenPatcher GUI via the Tools section or...
-   1. Run the SenPatcher.exe(Windows) or sentools(Linux) on a CLI with the `Type1.Decompress` option
-E.g `sentools Type1.Decompress <path-user.dat>`
+   1. Run the SenPatcher.exe(Windows) or sentools(Linux) on a CLI with the `Type1.Decompress` option.  
+      E.g `sentools Type1.Decompress <path-user.dat>`
 
 
 *Note: PC Saves are stored in `%USERPROFILE%\Saved Games\Falcom\ed8_psv5`*  
@@ -64,7 +64,7 @@ Reminder that deleting bytes earlier in the file affects the offsets that are la
 1. Offset 0x94E78 - Delete 12 bytes - Aligns the Playtime data
 1. Offset 0x1A3EE0 - Delete 8 bytes - Deletes the final 8 bytes of the file to have filesize match the PC filesize of 1720032
 
-Total Bytes Changed PS4 -> PC = (28 * 18) + 3540 + 12 + 8 = 4064 total bytes reduced.
+Total Bytes Changed PS4 -> PC = (28 * 18) + 3540 + 12 + 8 = 4064 total bytes reduced.  
 Total difference between PS4 and PC is 0 bytes in size.
 
 # Steps to Fix save checksum or ignore it
@@ -78,7 +78,7 @@ E.g `sentools Save.Checksum.Fix <path-user.dat>`
 Ignoring the Checksum can be done by either patching the `hnk.exe` executable or by using Cheat Engine application to apply the cheat table to skip over the checksum check.
 
 ### Address Notes
-Within the save file the checksum is located at offset 0xC for Trails into Reverie (for other games such as Horizon this is 0x8).
+Within the save file the checksum is located at offset 0xC for Trails into Reverie (for other games such as Horizon this is 0x8).  
 This checksum is calculated by running a CRC-32 algorithm with a polynomial of 0xEDB88320 from bytes 0x10 to the end of the save file.
 
 0x97D680 Address within the executable where the CRC-32 checksum function starts
@@ -183,32 +183,32 @@ ret
 ```
 
 ### Patching the Executable
-In version 1.1.4, the executable can be patched at the offset 0x59C66E.
-The following hex pattern can be used to is 41 39 52 0C 74 04 locate the bytes to patch in other versions of the game.
-Those bytes need to be replaced with 41 39 52 0C **EB** 04.
+In version 1.1.4, the executable can be patched at the offset 0x59C66E.  
+The following hex pattern can be used to is 41 39 52 0C 74 04 locate the bytes to patch in other versions of the game.  
+Those bytes need to be replaced with 41 39 52 0C **EB** 04.  
 This patches the `je` (74) instruction to be `jmp` (EB).
 
 
 ## Additional Notes:
-No Magic byte sequence to start the save data unlike Cold Steel 1 and Cold Steel 2 on PC
-Mira offset = 0x80C08
-Sepith Mass offset = 0x80B84
-Playtime (double type) offset = 0x95AB0
+No Magic byte sequence to start the save data unlike Cold Steel 1 and Cold Steel 2 on PC.  
+Mira offset = 0x80C08  
+Sepith Mass offset = 0x80B84  
+Playtime (double type) offset = 0x95AB0  
 First Character location offset = 0x18204 (stride between characters is 932 bytes)
 
 ### Character location/animation Data
-The player location offset is critical align to make sure the player character spawns at the correct location after load.
-It appears there are three set of offsets that have the same value They are made of 3 floats values for the X, Y, Z coordinates.
-Their offsets 0x18204, 0x18244, 0x18254 in the PC Version
-The stride of the data on PC appears to be 932 bytes and on PS4 960 bytes.
-Therefore 28 bytes must be deleted in the PC data for each character model to be aligned to the correct location.
-The most important to align is the first as that is the player character. Any issues with NPC models or monsters being in the wrong location can be resolved by switching to different map zone
+The player location offset is critical to align to make sure the player character spawns at the correct location after load.  
+It appears there are three set of offsets that have the same value They are made of 3 floats values for the X, Y, Z coordinates.  
+Their offsets 0x18204, 0x18244, 0x18254 in the PC Version.  
+The stride of the data on PC appears to be 932 bytes and on PS4 960 bytes.  
+Therefore 28 bytes must be deleted in the PC data for each character model to be aligned to the correct location.  
+The most important to align is the first as that is the player character. Any issues with NPC models or monsters being in the wrong location can be resolved by switching to different map zone.  
 
-The field model location alignment is only done for the first 10 models in these notes. There could be more models on the map that need to be aligned.
-However for the purpose of just getting the save to load correctly on the PC, adjusting the location data for the first 18 models should suffice.
-Plus for each field model location that is fixed decreases the number of bytes that must be deleted in order to align the Gameplay data later on.
+The field model location alignment is only done for the first 18 models in these notes. There could be more models on the map that need to be aligned.  
+However for the purpose of just getting the save to load correctly on the PC, adjusting the location data for the first 18 models should suffice.  
+Plus for each field model location that is fixed decreases the number of bytes that must be deleted in order to align the Gameplay data later on.  
 
 ###  Inventory Data
-This is the offset that must be aligned for the save to load the inventory correctly.
-Start Inventory Offset = 0x38E84 
-First Item slot is for Team Balm: 2 bytes for the item ID (0x0 is Tear Balm, 0x1 is Teara Balm etc...).  The stride of the data appears to be 32 bytes between entries
+This is the offset that must be aligned for the save to load the inventory correctly.  
+Start Inventory Offset = 0x38E84  
+First Item slot is for Team Balm: 2 bytes for the item ID (0x0 is Tear Balm, 0x1 is Teara Balm etc...).  The stride of the data appears to be 32 bytes between entries.
