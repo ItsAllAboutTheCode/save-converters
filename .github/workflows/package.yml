@@ -130,7 +130,7 @@ jobs:
             -f 'tag_name=${{ inputs.release-tag-number }}' -f 'target_commitish=main' \
             -f 'name=${{ inputs.release-tag-number }}' -f "body=$(cat releaseNotes.md)" -F "draft=true" \
             | jq -r '.id')
-            echo "Release ID=${RELEASE_ID}"
+            echo "Release ID=${release_id}"
             echo RELEASE_ID="${release_id}" >> ${GITHUB_ENV}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -139,22 +139,25 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           path: dist/
+          merge-multiple: true # Make sure the artifacts are downloaded to the dist directory
       - name: Upload release artifacts
         id: upload_release_artifacts
         run: |
-          find dist -maxdepth 1 -name '*.zip' -exec bash -c '
+          find dist -maxdepth 1 -type f -name '*.zip' -exec bash -c '
             artifact_path=$1
             artifact_name=$(basename "${artifact_path}")
+            content_length=$(stat -c '%s' "${artifact_path}")
+            content_type=$(file -b --mime-type "${artifact_path}")
             curl \
               -X POST \
-              -H "Content-Length: $(stat -c '%s' ${artifact_path})"  \
+              -H "Content-Length: ${content_length}"  \
               -H "Authorization: token ${{ github.token }}" \
-              -H "Content-Type: $(file -b --mime-type ${artifact_path})" \
+              -H "Content-Type: ${content_type}" \
               -H "Accept: application/vnd.github.v3+json" \
               --upload-file "${artifact_path}" \
               "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ env.RELEASE_ID }}/assets?name=${artifact_name}" \
-          | cat' upload_artifact {} \;
-          #find dist -maxdepth 1 -name '*.zip' -exec gh release upload ${{ inputs.release-tag-number}} {} \+
+            | cat \
+            ' upload_artifact {} \;
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
