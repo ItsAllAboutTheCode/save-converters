@@ -16,7 +16,7 @@ An example of setting up a converter can be found in the [trails_of_cold_steel_i
 
 ## Running git repo
 
-The save converter python script can be run directly from a local repo.
+The save converter python script can be run directly from a local repo.  
 
 ```bash
 git clone https://github.com/ItsAllAboutTheCode/save-converters.git
@@ -28,13 +28,13 @@ python save_converter.py
 
 Development environment requirements require [Python 3.14+](https://docs.python.org/3/whatsnew/3.14.html#pep-784-zstandard-support-in-the-standard-library) for access to the Zstandard module.  
 
-The recommended way steps to setup the dev environment is setup a virtual environment and then install the required python dependencies
+The recommended way to setup the dev environment is to setup a virtual environment and then install the required python dependencies.  
 That can be done using either `uv`:
 ```bash
 uv sync --all-extras
 . .venv/bin/activate
 ```
-Or by using pip
+Or by using `pip`
 ```bash
 python -m venv .venv # Create virtual environment
 . .venv/bin/activate
@@ -58,6 +58,23 @@ It is recommend to add at a test for any new save converter.
 Test can be run using either of the following commands:
 - `hatch env run -e lint lint`
 - or  `python -m unittest discover tests`
+
+## Building PyInstaller executable
+
+The project can build a native executable for Linux, MacOS or Windows that includes all the necessary dependencies to run in a standalone fashion.  
+In this case python, the user does not need python installed to run.  
+The `hatch` build tool can be invoked to perform a PyInstaller build.
+
+### Through uv
+```bash
+uv run hatch build -t custom
+```
+
+### Using hatch directly
+The hatch build tool must be installed in path or within the activated virtualenv.  
+```bash
+hatch build -t custom
+```
 
 ## Project Configuration files
 The project uses a [pyproject.toml](./pyproject.toml) file for configuration.  

@@ -36,7 +36,9 @@ hatch env run -e lint lint
 ## Requirements
 ### Running PyInstaller executable
 If running the executable generated from using `PyInstaller` tool, then a specific version of Python is not required.  
-All the executables on the [Releases](https://github.com/ItsAllAboutTheCode/save-converters/releases) page are built using `PyInstaller`.
+All executables on the [Releases](https://github.com/ItsAllAboutTheCode/save-converters/releases) page are built using `PyInstaller`.  
+
+* Steps to build a PyInstaller executable is listed in the [Building PyInstaller executable](./CONTRIBUTING.md#building-pyinstaller-executable) section of the `CONTRIBUTING.md` file.  
 
 ### Running Python script directly
 `Trails` save converter requirements: Python 3.14\+
