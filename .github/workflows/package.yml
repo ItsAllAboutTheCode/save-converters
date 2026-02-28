@@ -2,9 +2,10 @@ on:
   workflow_dispatch:
     inputs:
       release-tag-number:
+        type: string
         description: "Enter the release-tag number"
         required: true
-        default: "v1.0.0"
+        default: "v0.1.0"
 
 name: Create Release Package
 run-name: ${{ github.actor }} triggered release package creation
@@ -91,17 +92,18 @@ jobs:
             /repos/${{ github.repository }}/tags \
             | jq -r '.[].name')
           previous_tag=$(echo "$tags" | sort -V | tail -n 2 | head -n 1)
-          if [[ -z "${previous_tag}" ]]; then
-            # Use the initial commit in the repo if no tags (Commit with 0 parents)
-            previous_tag=$(git rev-list --max-parents=0 --first-parent HEAD)
+          if [[ -n "${previous_tag}" ]]; then
+            echo ${previous_tag}
+            echo "PREVIOUS_TAG=${previous_tag}" >> ${GITHUB_ENV}
           fi
-          echo ${previous_tag}
-          echo "PREVIOUS_TAG=${previous_tag}" >> ${GITHUB_ENV}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
       - name: Generate Release Notes
         run: |
+          if [[ -n "${{ env.PREVIOUS_TAG }}" ]]; then
+            prev_tag_option="-f previous_tag_name=${{ env.PREVIOUS_TAG }}"
+          fi
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
@@ -109,30 +111,50 @@ jobs:
             /repos/${{ github.repository }}/releases/generate-notes \
             -f tag_name=${{ inputs.release-tag-number }} \
             -f target_commitish=main \
-            -f previous_tag_name=${{ env.PREVIOUS_TAG }} \
-            | jq -r '.body' > releaseNote.md
+            ${prev_tag_option} \
+            | jq -r '.body' > releaseNotes.md
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
       - name: View Release Notes
-        run: cat releaseNote.md
+        run: cat releaseNotes.md
         shell: bash
       - name: Create Release
         id: create_release
         run: |
-          gh release create ${{ inputs.release-tag-number }} --prerelease --draft -F releaseNote.md
+          release_id=$(gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository }}/releases \
+            -f 'tag_name=${{ inputs.release-tag-number }}' -f 'target_commitish=main' \
+            -f 'name=${{ inputs.release-tag-number }}' -f "body=$(cat releaseNotes.md)" -F "draft=true" \
+            | jq -r '.id')
+            echo "Release ID=${RELEASE_ID}"
+            echo RELEASE_ID="${release_id}" >> ${GITHUB_ENV}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
-      - name: Download Linux pyinstaller zip
+      - name: Download pyinstaller artifacts (All platforms)
         uses: actions/download-artifact@v6
         with:
           path: dist/
-
-      - name: Upload linux artifacts
-        id: upload_linux_artifacts
+      - name: Upload release artifacts
+        id: upload_release_artifacts
         run: |
-          gh release upload ${{ inputs.release-tag-number }} dist/*.zip
+          find dist -maxdepth 1 -name '*.zip' -exec bash -c '
+            artifact_path=$1
+            artifact_name=$(basename "${artifact_path}")
+            curl \
+              -X POST \
+              -H "Content-Length: $(stat -c '%s' ${artifact_path})"  \
+              -H "Authorization: token ${{ github.token }}" \
+              -H "Content-Type: $(file -b --mime-type ${artifact_path})" \
+              -H "Accept: application/vnd.github.v3+json" \
+              --upload-file "${artifact_path}" \
+              "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ env.RELEASE_ID }}/assets?name=${artifact_name}" \
+          | cat' upload_artifact {} \;
+          #find dist -maxdepth 1 -name '*.zip' -exec gh release upload ${{ inputs.release-tag-number}} {} \+
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
