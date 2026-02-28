@@ -19,8 +19,8 @@ Prereq: Need SenPatcher from https://github.com/AdmiralCurtiss/SenPatcher/releas
 E.g `sentools Type1.Decompress <path-user.dat>`
 
 
-*Note: PC Saves are stored in `%USERPROFILE%\Saved Games\Falcom\ed8_psv5`*
-*Also PC saves are compressed using ZStandard, However the PC version can load uncompressed saves*
+*Note: PC Saves are stored in `%USERPROFILE%\Saved Games\Falcom\ed8_psv5`*  
+*Also PC saves are compressed using ZStandard, however the PC version can load uncompressed saves*
 
 # Steps to modify PS4 save to load on PC.
 Reminder that deleting bytes earlier in the file affects the offsets that are later in the file
@@ -82,7 +82,7 @@ Within the save file the checksum is located at offset 0xC for Trails into Rever
 This checksum is calculated by running a CRC-32 algorithm with a polynomial of 0xEDB88320 from bytes 0x10 to the end of the save file.
 
 0x97D680 Address within the executable where the CRC-32 checksum function starts
-``
+```
 cmp     dword ptr [rip + 0xd2252d], 0
 lea     r11, [rip + 0xd22522]
 mov     r10d, r8d
@@ -179,7 +179,7 @@ xor     eax, dword ptr [r11 + rdx*4]
 test    r9b, r9b
 jne     0x97d778
 not     eax
-ret     `
+ret
 ```
 
 ### Patching the Executable

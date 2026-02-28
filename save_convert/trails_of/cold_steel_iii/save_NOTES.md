@@ -38,7 +38,7 @@ Total Bytes Changed PS4 -> PC = (16 * 10) + 2176 - (16 * 2) + (4 * 2) + 8 = 2320
 After conversion the old PS4 save file should have the same size as the original PC save.
 
 ## Additional Notes:
-No 4 octer Magic byte to start the save data unlike Cold Steel 1 and Cold Steel 2 on PC
+No 4 octet Magic byte to start the save data unlike Cold Steel 1 and Cold Steel 2 on PC
 Mira offset = 0x676A8
 Sepith Mass offset = 0x67664
 Some kind Coordinate offset? = 0x7840C (3 floats)
