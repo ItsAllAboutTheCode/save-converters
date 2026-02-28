@@ -1,6 +1,6 @@
 # Map of game name to save  converter modules
 converter_modules: dict[str, str] = {
-    "vesperia": "save_convert.tales_of.vesperia.vesperia_save_converter",
+    "tales-of-vesperia": "save_convert.tales_of.vesperia.tales_of_vesperia_save_converter",
     "trails-of-cold-steel-i": "save_convert.trails_of.cold_steel_i.trails_of_cold_steel_i_save_converter",
     "trails-of-cold-steel-ii": "save_convert.trails_of.cold_steel_ii.trails_of_cold_steel_ii_save_converter",
     "trails-of-cold-steel-iii": "save_convert.trails_of.cold_steel_iii.trails_of_cold_steel_iii_save_converter",

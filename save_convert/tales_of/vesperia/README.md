@@ -5,18 +5,18 @@ Supports PS3, PC.
 ## Usage
 Information on supported options can be found by running the following command from the root of the repo.
 ```bash
-python save_converter.py vesperia --help
+python save_converter.py tales-of-vesperia --help
 ```
 
 ### Example
 #### Convert PS3 -> PC Vesperia Save
 ```bash
-python save_converter.py vesperia --convert-format=ps3-to-pc -i <path-to-ps3-save> -o <path-to-store-pc-save>
+python save_converter.py tales-of-vesperia --convert-format=ps3-to-pc -i <path-to-ps3-save> -o <path-to-store-pc-save>
 ```
 
 ####  Convert PC -> PS3 Vesperia Save
 ```bash
-python save_converter.py vesperia --convert-format=pc-to-ps3 -i <path-to-pc-save> -o <path-to-store-ps3-save>
+python save_converter.py tales-of-vesperia --convert-format=pc-to-ps3 -i <path-to-pc-save> -o <path-to-store-ps3-save>
 ```
 
 ---

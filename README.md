@@ -9,7 +9,7 @@ Scripts converters are supported for the following games:
 
 | Game | Script | Cheat Tables |
 | :--- | :--- | :-- |
-| Tales of Vesperia | [vesperia-converter](./save_convert/tales_of/vesperia/README.md) | [vesperia-cheat-tables](./save_convert/tales_of/vesperia/cheat_tables) |
+| Tales of Vesperia | [tales-of-vesperia-converter](./save_convert/tales_of/vesperia/README.md) | [tales-of-vesperia-cheat-tables](./save_convert/tales_of/vesperia/cheat_tables) |
 | The Legend of Heroes - Trails of Cold Steel I | [trails-of-cold-steel-i-converter](./save_convert/trails_of/cold_steel_i/README.md) | [trails-of-cold-steel-iv-cheat-tables](./save_convert/trails_of/cold_steel_i/cheat_tables) |
 | The Legend of Heroes - Trails of Cold Steel II | [trails-of-cold-steel-ii-converter](./save_convert/trails_of/cold_steel_ii/README.md) | [trails-of-cold-steel-iv-cheat-tables](./save_convert/trails_of/cold_steel_ii/cheat_tables) |
 | The Legend of Heroes - Trails of Cold Steel III | [trails-of-cold-steel-iii-converter](./save_convert/trails_of/cold_steel_iii/README.md) | [trails-of-cold-steel-iv-cheat-tables](./save_convert/trails_of/cold_steel_iii/cheat_tables) |

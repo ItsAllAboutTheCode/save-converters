@@ -31,7 +31,7 @@ from save_convert.save_convert_base import (
     SaveFormat,
     fill_replace_func_in_offset_range_gaps,
 )
-from save_convert.tales_of.vesperia.vesperia_title_id_list import (
+from save_convert.tales_of.vesperia.tales_of_vesperia_title_id_list import (
     VESPERIA_PC_TITLE_IDS,
     VESPERIA_PS3_TITLE_IDS,
 )
