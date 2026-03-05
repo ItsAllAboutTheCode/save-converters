@@ -1,24 +1,19 @@
 """Base structures for converting Trails of Cold Steel from PS3 to PC"""
 
 import argparse
-import bisect
 import ctypes
 import logging
 import pathlib
-import shutil
-import tempfile
-from abc import ABC, abstractmethod
+from abc import ABC
 from compression import zstd
 from io import BytesIO
 from typing import Any, cast, override
 
-from save_convert.save_convert_base import (
+from save_convert.save_converter_base import (
     PC_TO_PS4_CONVERT_FORMAT,
+    PC_TO_PS5_CONVERT_FORMAT,
     PS4_TO_PC_CONVERT_FORMAT,
-    ConvertFormat,
-    ReplaceMap,
-    ReplaceResult,
-    ReplaceState,
+    PS5_TO_PC_CONVERT_FORMAT,
     SaveConvertBase,
 )
 
@@ -228,146 +223,40 @@ def decompress_savedata(input_data: bytes) -> bytes:
     return input_data
 
 
-def process_input_savedata(
-    offset: int,
-    input_data: bytes,
-    patch_set: list[ReplaceMap],
-    current_patch_index: int,
-    convert_format: ConvertFormat,
-) -> ReplaceResult:
-    """Process every 4 bytes(32-bits) of the input data to determine how it should be written to the output
-    The order of precendence for operations are:
-    1. Determine if bytes should be replaced at an offset (Replace bytes)
-    2. Determine if the bytes at an offset should be endian swaped based on the endian_swap_size value (Swap Bytes)
-
-
-    :param: offset Offset being examined from the input save data
-    :param: input_data Data from the input save file
-    :param: replace_set Ordered list of offset range -> bytes to replace
-            This set is used to replace data that between the offset range
-    :param: replace_start_index Index in the replace set to start to search for the offset within
-            This value gets updated by this method and returned. It should initially be set to 0
-            and then passed back into this method every iteration.
-
-    :return: Result class containing (bytes_to_write_to_output, updated_input_offset,
-             replacement for the current input range has completed)
-    """
-    ### Determine if offset references a value within the replace set
-    replace_index: int = -1
-    if patch_set:
-        # Get the first smallest index > @offset
-        lower_bound = bisect.bisect_left(
-            patch_set,
-            offset,
-            lo=current_patch_index,
-            key=lambda entry: entry.replace_functor.source_range.start,
-        )
-
-        if lower_bound != len(patch_set) and patch_set[lower_bound].replace_functor.source_range.start == offset:
-            # If the offset is exactly equal to the lower_bound start offset, use that entry
-            replace_index = lower_bound
-        elif lower_bound > 0:
-            # Otherwise check if the previous index replace entry end offset is >= offset
-            if patch_set[lower_bound - 1].replace_functor.source_range.end >= offset:
-                replace_index = lower_bound - 1
-
-    if replace_index != -1:
-        output_result = patch_set[replace_index].replace_functor(input_data, offset, convert_format)
-        return output_result
-
-    return ReplaceResult(data=b"", new_offset=offset, replace_complete=ReplaceState.Skip)
-
-
 class SaveConvertColdSteelBase(SaveConvertBase, ABC):
-    _input_path: pathlib.Path
-    _output_path: pathlib.Path
-    _convert_format: ConvertFormat
-    _input_data: bytes
-    _output_io: BytesIO
+    _decompress_only: bool  # Only perform decompress, no conversion
 
+    @override
     def __init__(self, args: argparse.Namespace):
-        super().__init__()
-        self._input_path = cast("pathlib.Path", args.input)
-        self._convert_format = cast("ConvertFormat", args.convert_format)
-        output_path: pathlib.Path | None = args.output
-        if not output_path:
-            output_path = self._input_path.with_suffix(f"{self._input_path.suffix}.{self._convert_format.target}")
-            logger.info(f"No Output path specified, it has been set to {output_path}")
+        super().__init__(args)
 
-        self._output_path = output_path
+        # Parse decompression logic
+        self._decompress_only = cast(bool, args.decompress_only)
+        output_path: pathlib.Path | None = args.output
+        if self._decompress_only and not output_path:
+            self._output_path: pathlib.Path = self._input_path.with_suffix(f"{self._input_path.suffix}.dec")
 
     @override
     def _pre_convert(self) -> bool:
-        """Pre-load save data from the input file into memory"""
-        # Read the entire save into memory
-        with self._input_path.open("rb") as infile:
-            try:
-                self._input_data = decompress_savedata(infile.read())
-            except BlockingIOError as err:
-                logger.error(f"Unable to read data from input file {self._input_path}: {err}")
-                return False
+        if not super()._pre_convert():
+            return False
 
+        # Attempt to decompress the save data if it is compressed
+        self._input_data: bytes = decompress_savedata(self._input_data)
         return True
 
     @override
     def _convert(self) -> bool:
-        """Iterates over the input save file, attempting byte replacements from the source save format
-        in order to convert the target save format
-        """
-        self._output_io = BytesIO()  # Create a in-memory binary IO buffer for storing output data
-        patch_set = self.create_save_patch_table(
-            convert_format=self._convert_format,
-        )
-        patch_index = 0
-
-        cur_offset = 0
-        while cur_offset < len(self._input_data):
-            result = process_input_savedata(
-                offset=cur_offset,
-                input_data=self._input_data,
-                patch_set=patch_set,
-                current_patch_index=patch_index,
-                convert_format=self._convert_format,
-            )
-
-            try:
-                if self._output_io.write(result.data) != len(result.data):
-                    logger.error(
-                        f"Unable to write {len(result.data)} bytes  to output. Input offset: {cur_offset}."
-                        f" Output offset: {self._output_io.tell()}",
-                    )
-                    return False
-            except OSError as _err:
-                logger.exception("Failed to write to output\n")
-                return False
-
-            # If no progress has been made in the processing of the input data
-            # Then break to prevent an infinite loop
-            if result.replace_complete == ReplaceState.Skip:
-                break
-
-            # Update the current offset being processed and the replace set index
-            cur_offset = result.new_offset
-            patch_index += 1 if result.replace_complete else 0
-
-        return True
+        if self._decompress_only:
+            # Copy decompress bytes to output buffer
+            self._output_io: BytesIO = BytesIO()
+            _ = self._output_io.write(self._input_data)
+            return True
+        return super()._convert()
 
     @override
     def _post_convert(self) -> bool:
-        """Writes the output data to the destination file atomically"""
-        # Now copy temporary output file to destination
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmp_output_path = pathlib.Path(f"{tmpdir}/{self._output_path.name}").resolve()
-            with tmp_output_path.open("wb") as outfile:
-                byte_buffer = self._output_io.getvalue()
-                if outfile.write(byte_buffer) != len(byte_buffer):
-                    raise IOError(f"Failed to write {len(byte_buffer)} to output file. Aborting...")
-                self._output_io.close()
-            return bool(shutil.move(tmp_output_path, self._output_path))
-
-    @abstractmethod
-    def create_save_patch_table(self, convert_format: ConvertFormat) -> list[ReplaceMap]:
-        return []
+        return super()._post_convert()
 
 
 def build_crc_table(crc32_poly: int = TRAILS_OF_CRC32_POLYNOMIAL):
@@ -391,9 +280,33 @@ def calc_crc32(data: memoryview[int], init_value: int) -> int:
     return crc
 
 
-class SaveConvertColdSteelChecksumBase(SaveConvertColdSteelBase, ABC):
+class SaveConvertColdSteelFilesizeBase(SaveConvertColdSteelBase, ABC):
+    """
+    Converter for Trails of Cold Steel III/IV/Reverie which updates the filesize at offset 0x08
+    after conversion
+    """
+
     FILESIZE_OFFSET: int = 8
-    CHECKSUM_OFFSET: int = FILESIZE_OFFSET + 4
+
+    @override
+    def _post_convert(self) -> bool:
+        """Fixes the filesize for Trails of Cold Steel III/IV/Reverie"""
+        byte_view = self._output_io.getbuffer()
+        filesize = len(byte_view)
+        # Update filesize value
+        byte_view[self.FILESIZE_OFFSET : self.FILESIZE_OFFSET + 4] = filesize.to_bytes(length=4, byteorder="little")
+
+        byte_view.release()  # Allow the BytesIO object to be closed
+        return super()._post_convert()
+
+
+class SaveConvertColdSteelChecksumBase(SaveConvertColdSteelFilesizeBase, ABC):
+    """
+    Converter for Trails of Cold Steel IV/Reverie which updates the checksum at offset 0x0C
+    after conversion
+    """
+
+    CHECKSUM_OFFSET: int = SaveConvertColdSteelFilesizeBase.FILESIZE_OFFSET + 4
     START_SAVEDATA_OFFSET: int = CHECKSUM_OFFSET + 4
 
     @override
@@ -401,12 +314,9 @@ class SaveConvertColdSteelChecksumBase(SaveConvertColdSteelBase, ABC):
         """Fixes the checksum for Trails of Cold Steel IV/Reverie"""
         byte_view = self._output_io.getbuffer()
         # The save checksum is calculated using the remaining filesize in the file
-        # filesize = int.from_bytes(byte_view[self.FILESIZE_OFFSET : self.FILESIZE_OFFSET + 4], byteorder="little")
         filesize = len(byte_view)
-        # Update filesize value
-        byte_view[self.FILESIZE_OFFSET : self.FILESIZE_OFFSET + 4] = filesize.to_bytes(length=4, byteorder="little")
         savedata_size = filesize - self.START_SAVEDATA_OFFSET
-        fixed_checksum = calc_crc32(byte_view[self.START_SAVEDATA_OFFSET :], savedata_size)
+        fixed_checksum = calc_crc32(byte_view[self.START_SAVEDATA_OFFSET :], init_value=savedata_size)
         # Update checksum value
         byte_view[self.CHECKSUM_OFFSET : self.CHECKSUM_OFFSET + 4] = fixed_checksum.to_bytes(
             length=4, byteorder="little"
@@ -449,6 +359,10 @@ def add_argparse_commands(parser: argparse.ArgumentParser) -> None:
                 setattr(namespace, self.dest, PS4_TO_PC_CONVERT_FORMAT)
             elif values == str(PC_TO_PS4_CONVERT_FORMAT):
                 setattr(namespace, self.dest, PC_TO_PS4_CONVERT_FORMAT)
+            elif values == str(PS5_TO_PC_CONVERT_FORMAT):
+                setattr(namespace, self.dest, PS5_TO_PC_CONVERT_FORMAT)
+            elif values == str(PC_TO_PS5_CONVERT_FORMAT):
+                setattr(namespace, self.dest, PC_TO_PS5_CONVERT_FORMAT)
             else:
                 raise ValueError(f"Value {values} is not an appropriate choice for argument {options_string}")
 
@@ -459,4 +373,12 @@ def add_argparse_commands(parser: argparse.ArgumentParser) -> None:
         choices=[str(PS4_TO_PC_CONVERT_FORMAT), str(PC_TO_PS4_CONVERT_FORMAT)],
         default=PS4_TO_PC_CONVERT_FORMAT,
         help="Specifies the input file save format and what should the output file format should be.",
+    )
+
+    parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
+        "--decompress-only",
+        "-d",
+        action="store_true",
+        help="Decompress the input file if compressed, does not perform format conversion.\n"
+        "File extension will be <input-path>.dec if --output option is not set",
     )

@@ -28,8 +28,7 @@ Reminder that deleting bytes earlier in the file affects the offsets that are la
 1. Offset (0xDE2C + 1152 * 6) = 0x1022C - Delete 16 bytes - Should align the location/animation state data for field model 9
 1. Offset (0xDE2C + 1152 * 6) = 0x106AC - Delete 16 bytes - Should align the location/animation state data for field model 10
 1. Offset 0x36580 - Delete 2176 bytes - Inventory data should be aligned
-1. Offset 0x66980 - Append 16 bytes of FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 
-1. Offset 0x66990 - Append another 16 bytes of FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 - Should align gameplay data such as Mira and Sepith
+1. Offset 0x66980 - Append 32 bytes of FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00  - Should align gameplay data such as Mira and Sepith
 1. Offset 0x7840C - Delete 4 bytes - Should align what looks to be some kind of X, Y, Z coordinates
 1. Offset 0x78440 - Delete 4 bytes - Should align the playtime data
 1. Offset 0x1402C0 - Delete 8 bytes - Makes the converted save have the exact size of an original PC save

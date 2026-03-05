@@ -76,7 +76,7 @@ Reminder that deleting bytes earlier in the file affects the offsets that are la
 1. Offset (0xCFC0 + 1148 * 27) = 0x148D4 - Delete 12 bytes - Should align the animation state data for character model 28
 
 1. Offset 0x354EC - Delete 2320 bytes - Game data should be aligned
-1. Offset 0x70BDC - Delete 12 bytes - Playtime at offset 0x71208 should be aligned
+1. Offset 0x70BD0 - Delete 12 bytes - Playtime at offset 0x71208 should be aligned
 1. Offset 0x78998 - Delete 8 bytes - Makes the PS4 and PC save have the exact same size
 
 Total Bytes Changed PS4 -> PC:  

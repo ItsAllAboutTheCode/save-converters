@@ -15,7 +15,7 @@ python save_converter.py trails-of-cold-steel-ii --convert-format=ps4-to-pc -i <
 ```
 
 #### Reverse Conversion
-The reverse conversion from PC -> PS4 is experimental and untested, however it is performed by reversing the PS4 -> PC patch table
+The reverse conversion from PC -> PS4 is supported.  
 ```bash
 python save_converter.py trails-of-cold-steel-ii --convert-format=pc-to-ps4 -i <path-to-pc-save> -o <path-to-store-ps4-save>
 ```

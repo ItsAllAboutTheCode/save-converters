@@ -1,6 +1,8 @@
 # The Legend of Heroes - Trails into Reverie Save Converter
 Save Converter for The Legend of Heroes - Trails into Reverie.  
-Supports PS4, PC.  
+Supports PS4, PS5, PC.  
+
+The PS4 and PS5 saves are the same format and decompressed size
 
 ## Usage
 Information on supported options can be found by running the following command from the root of the repo.
@@ -9,15 +11,28 @@ python save_converter.py trails-into-reverie --help
 ```
 
 ### Example
-#### Convert PS4 -> PC Trails into Reverie Save
+#### Convert PS4/PS5 -> PC Trails into Reverie Save
 ```bash
 python save_converter.py trails-into-reverie --convert-format=ps4-to-pc -i <path-to-ps4-save> -o <path-to-store-pc-save>
 ```
+```bash
+python save_converter.py trails-into-reverie --convert-format=ps5-to-pc -i <path-to-ps5-save> -o <path-to-store-pc-save>
+```
 
 #### Reverse Conversion
-The reverse conversion from PC -> PS4 is experimental and untested, however it is performed by reversing the PS4 -> PC patch table
+The reverse conversion from PC -> PS4 is supported.  
 ```bash
 python save_converter.py trails-into-reverie --convert-format=pc-to-ps4 -i <path-to-pc-save> -o <path-to-store-ps4-save>
+```
+```bash
+python save_converter.py trails-into-reverie --convert-format=pc-to-ps4 -i <path-to-pc-save> -o <path-to-store-ps5-save>
+```
+
+#### Decompress Input File Only
+The input file can be decompressed without conversion to different format.  
+Supported compression types are: `Falcom Type1` and `Zstandard` (ZSTD)
+```bash
+python save_converter.py trails-into-reverie -i <path-to-compressed-save> -o <path-to-decompressed-save>
 ```
 
 ## Credits

@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
-from save_convert.save_convert_base import (
+from save_convert.save_converter_base import (
     ConvertFormat,
     SaveFormat,
 )
@@ -53,12 +53,11 @@ class TestConvertVesperiaSave(TestCase):
             test_args = Namespace(
                 input=test_file,
                 output=self.test_filepath / "SAVE.convert",
-                game_name="vesperia",
                 convert_format=ConvertFormat(SaveFormat.PS3, SaveFormat.PC),
                 patch_dlc_item_checks=False,
             )
-            # Convert from PS3 to PC save
 
+            # Convert from PS3 to PC save
             self.assertTrue(start_convert(test_args))
             self.assertEqual(len(test_bytes), VESPERIA_PC_SAVE_SIZE)
             # Now convert from PC save back to PS3 save

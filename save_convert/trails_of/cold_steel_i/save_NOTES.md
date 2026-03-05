@@ -18,7 +18,7 @@ Prereq: Need SenPatcher from https://github.com/AdmiralCurtiss/SenPatcher/releas
 # Steps to modify PS4 save to load on PC.
 Reminder that deleting bytes earlier in the file affects the offsets that are later in the file
 1. Offset 0x0 - Append 4 bytes C0 08 07 00 - magic bytes to identify save
-1. Offset 0x20 - Delete 20 bytes - Character data at offset 0x480 should be aligned now
+1. Offset 0x400 - Delete 20 bytes - Character data at offset 0x480 should be aligned now
 
 1. Offset 0x2E24 - Delete 12 bytes - Should align location data for model 1
 1. Offset 0x2E94 - Delete 8 bytes - Start partial alignment of animation state data for model 1

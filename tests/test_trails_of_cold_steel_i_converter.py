@@ -1,15 +1,17 @@
-from argparse import Namespace
+from argparse import ArgumentParser
 from io import BytesIO
 from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
-from save_convert.save_convert_base import (
-    ConvertFormat,
-    SaveFormat,
+from save_convert.save_converter_base import (
+    PC_TO_PS4_CONVERT_FORMAT,
+    PS4_TO_PC_CONVERT_FORMAT,
 )
 from save_convert.trails_of.cold_steel_i.trails_of_cold_steel_i_save_converter import (
     TRAILS_OF_COLD_STEEL_I_PC_SAVE_SIZE,
+    TRAILS_OF_COLD_STEEL_I_PS4_SAVE_SIZE,
+    add_commands,
     start_convert,
 )
 
@@ -24,7 +26,7 @@ class TestConvertTrailsOfColdSteelISave(TestCase):
         test_file = self.test_filepath / "SAVE.ps4"
         assert test_file.exists()
 
-        expected_ps3_save_bytes = test_file.read_bytes()
+        expected_ps4_save_bytes = test_file.read_bytes()
 
         test_bytes: bytearray = bytearray()
         wrapped_bytesio = BytesIO()
@@ -41,7 +43,7 @@ class TestConvertTrailsOfColdSteelISave(TestCase):
         def redirect_data_byte_io(file, mode, *args):
             if mode == "wb":
                 return mock_output_byteio
-            return BytesIO(expected_ps3_save_bytes)
+            return BytesIO(expected_ps4_save_bytes)
 
         mock_open_method = MagicMock(side_effect=redirect_data_byte_io)
 
@@ -49,14 +51,44 @@ class TestConvertTrailsOfColdSteelISave(TestCase):
             patch("io.open", mock_open_method) as _mock_file_open,
             patch("shutil.move") as _mock_shutil_move,
         ):
-            test_args = Namespace(
-                input=test_file,
-                output=self.test_filepath / "SAVE.convert",
-                game_name="trails_of_cold_steel_i",
-                convert_format=ConvertFormat(SaveFormat.PS4, SaveFormat.PC),
-                patch_dlc_item_checks=False,
+            parser = ArgumentParser(
+                description="Test Parser",
+            )
+            add_commands(parser)
+            test_args = parser.parse_args(
+                [
+                    "-i",
+                    str(test_file),
+                    "-o",
+                    str(self.test_filepath / "SAVE.convert"),
+                    "-f",
+                    str(PS4_TO_PC_CONVERT_FORMAT),
+                ]
             )
 
             # Convert from PS4 to PC save
             self.assertTrue(start_convert(test_args))
             self.assertEqual(len(test_bytes), TRAILS_OF_COLD_STEEL_I_PC_SAVE_SIZE)
+
+            # Now convert from PC save back to PS4 save
+            pc_converted_bytes = test_bytes.copy()
+            test_bytes.clear()
+
+            def redirect_input_from_byte_io(file, mode, *args):
+                if mode == "wb":
+                    return mock_output_byteio
+                # Use the bytes from the previous conversion
+                nonlocal pc_converted_bytes
+                return BytesIO(pc_converted_bytes)
+
+            mock_open_method.side_effect = redirect_input_from_byte_io
+            test_args.convert_format = PC_TO_PS4_CONVERT_FORMAT
+            self.assertTrue(start_convert(test_args))
+            self.assertEqual(len(test_bytes), TRAILS_OF_COLD_STEEL_I_PS4_SAVE_SIZE)
+
+            # When converting from PS4 -> PC, the byte sequence between PS4: [0x7931C, 0x7961C)
+            # contains 0xCD bytes that are deleted, therefore the conversion within this range isn't lossless
+            # therefore skip comparing those bytes
+            skip_compare_begin, skip_compare_end = (0x7931C, 0x7961C)
+            self.assertEqual(expected_ps4_save_bytes[:skip_compare_begin], test_bytes[:skip_compare_begin])
+            self.assertEqual(expected_ps4_save_bytes[skip_compare_end:], test_bytes[skip_compare_end:])
