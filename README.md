@@ -1,9 +1,25 @@
 # Console Save <-> PC Save Conversion scripts
 
-The scripts in this repo are used for converting decrypted saves of console games to their PC equivalents.  
-The list of games of supported games are enumarated in the [How to use](#how-to-use) section below.
+The scripts in this repo are used for converting decrypted saves of console games (PS3, PS4, PS5) to their PC equivalents.  
+The list of games of supported games are enumerated in the [How to use](#how-to-use) section below.  
+
+
+
 
 ## How to use
+
+There are various tools that can be used to get decrypted console savedata content.
+
+### Decryption Tools
+
+| Console | Decryption Tool |
+| :--- | :--- |
+| PS3 | [Apollo Save Tool (PS3)](https://github.com/bucanero/apollo-ps3) |
+| PS4 | [Apollo Save Tool (PS4)](https://github.com/bucanero/apollo-ps4) |
+| PS5 | [Garlic SaveMgr for PS5](https://github.com/earthonion/garlic-savemgr) |
+| PS5 | [ps5-sd-tool](https://github.com/c0w-ar/ps5-sd-tool) |
+
+### Script Converters
 
 Scripts converters are supported for the following games:
 
