@@ -14,7 +14,7 @@ python save_converter.py tales-of-vesperia --help
 python save_converter.py tales-of-vesperia --convert-format=ps3-to-pc -i <path-to-ps3-save> -o <path-to-store-pc-save>
 ```
 
-####  Convert PC -> PS3 Vesperia Save
+#### Convert PC -> PS3 Vesperia Save
 ```bash
 python save_converter.py tales-of-vesperia --convert-format=pc-to-ps3 -i <path-to-pc-save> -o <path-to-store-ps3-save>
 ```
