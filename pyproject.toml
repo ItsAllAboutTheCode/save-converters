@@ -17,22 +17,32 @@ classifiers = [
 ]
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
+dependencies = [
+      "pycryptodome>=3.23.0"
+]
 
 [project.urls]
 Homepage = "https://github.com/ItsAllAboutTheCode/save-converter"
 Issues = "https://github.com/ItsAllAboutTheCode/save-converter/issues"
 
 
-[project.optional-dependencies]
-lint = [
-  "ruff",
-  "mypy"
-]
-
 [dependency-groups]
-dev = [
+build = [
     "hatch>=1.16.5",
     "pyinstaller>=6.19.0",
+    "ruff>=0.15.0",
+    "mypy>=1.19.1"
+]
+lint = [
+    "ruff>=0.15.0",
+    "mypy>=1.19.1"
+]
+dev = [
+    { include-group = "build" },
+    { include-group = "lint" }
+]
+all = [
+  { include-group = "dev" }
 ]
 
 
@@ -82,12 +92,13 @@ dependencies = [
 [tool.hatch.envs.lint.scripts]
 lint = [
   "ruff format --check --diff",
-  "ruff check --output-format=github"
+  "ruff check --output-format=github",
+  "mypy --python-version=3.14 .",
 ]
 lint-action = [
   "ruff format",
   "ruff check --output-format=full --fix --show-fixes",
-  "mypy",
+  "mypy --python-version=3.14 .",
   "python -m unittest discover tests"
 ]
 
@@ -116,3 +127,4 @@ disable_error_code = 'annotation-unchecked'
 reportImplicitStringConcatenation = false # Ignores implicit string concatenation across multiple lines
 reportExplicitAny = false # Ignores when a parameter is explicitly marked as Any
 reportAny = false # Ignores when a parameter is marked as Any
+pythonVersion = "3.14"
