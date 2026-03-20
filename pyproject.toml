@@ -25,7 +25,8 @@ Issues = "https://github.com/ItsAllAboutTheCode/save-converter/issues"
 
 [project.optional-dependencies]
 lint = [
-  "ruff"
+  "ruff",
+  "mypy"
 ]
 
 [dependency-groups]
@@ -74,36 +75,41 @@ packages = [
 
 [tool.hatch.envs.lint]
 dependencies = [
-  "ruff>=0.15.0"
+  "ruff>=0.15.0",
+  "mypy>=1.19.1"
 ]
 
 [tool.hatch.envs.lint.scripts]
 lint = [
-  "ruff format",
-  "ruff check --output-format=full --fix --show-fixes",
-  "python -m unittest discover tests",
+  "ruff format --check --diff",
+  "ruff check --output-format=github"
 ]
 lint-action = [
-  "ruff format --check --diff",
-  "ruff check --output-format=github",
-  "python -m unittest discover tests",
+  "ruff format",
+  "ruff check --output-format=full --fix --show-fixes",
+  "mypy",
+  "python -m unittest discover tests"
 ]
-
 
 [tool.ruff]
 line-length = 120
-
 src = [
   "save_converter.py",
   "save_convert",
   "tests",
 ]
-
 lint.select = [
 "E", "F", "I"
 ]
 
 lint.ignore = ["D", "INP001"]
+
+[tool.mypy]
+exclude = [
+  'pyinstaller-hooks/.*\.py',
+  'hatch_build\.py'
+]
+disable_error_code = 'annotation-unchecked'
 
 [tool.basedpyright]
 # Disabling some annoying pyright reports that is not important to program correctness
