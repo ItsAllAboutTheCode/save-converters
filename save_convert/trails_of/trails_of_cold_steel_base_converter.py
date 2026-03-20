@@ -384,7 +384,7 @@ def add_argparse_commands(parser: argparse.ArgumentParser) -> None:
     )
 
     _ = parser.add_argument(
-        "--loglevel",
+        "--log-level",
         "-l",
         default=logging.INFO,
         choices=logging.getLevelNamesMapping(),

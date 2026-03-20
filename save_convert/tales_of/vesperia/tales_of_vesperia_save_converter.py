@@ -522,8 +522,8 @@ class SaveConvertVesperia(SaveConvertBase):
 
 ### Start of argument parser setup
 def start_convert(args: argparse.Namespace):
-    if hasattr(args, "loglevel"):
-        LOGGER.setLevel(args.loglevel)
+    if hasattr(args, "log_level"):
+        LOGGER.setLevel(args.log_level)
     save_converter = SaveConvertVesperia(args)
     return save_converter.convert()
 
@@ -594,7 +594,7 @@ def main():
     )
 
     _ = parser.add_argument(
-        "--loglevel",
+        "--log-level",
         "-l",
         default=logging.INFO,
         choices=logging.getLevelNamesMapping(),

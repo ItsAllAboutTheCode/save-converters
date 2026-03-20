@@ -480,8 +480,8 @@ class SaveConvertColdSteelI(SaveConvertColdSteelBase):
 
 ### Start of argument parser setup
 def start_convert(args: argparse.Namespace):
-    if hasattr(args, "loglevel"):
-        LOGGER.setLevel(args.loglevel)
+    if hasattr(args, "log_level"):
+        LOGGER.setLevel(args.log_level)
     save_converter = SaveConvertColdSteelI(args)
     return save_converter.convert()
 
