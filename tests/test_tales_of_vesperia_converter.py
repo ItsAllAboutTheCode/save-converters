@@ -1,16 +1,17 @@
-from argparse import Namespace
+from argparse import ArgumentParser
 from io import BytesIO
 from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 from save_convert.save_converter_base import (
-    ConvertFormat,
-    SaveFormat,
+    PC_TO_PS3_CONVERT_FORMAT,
+    PS3_TO_PC_CONVERT_FORMAT,
 )
 from save_convert.tales_of.vesperia.tales_of_vesperia_save_converter import (
     VESPERIA_PC_SAVE_SIZE,
     VESPERIA_PS3_SAVE_SIZE,
+    add_commands,
     start_convert,
 )
 
@@ -50,15 +51,24 @@ class TestConvertVesperiaSave(TestCase):
             patch("io.open", mock_open_method) as _mock_file_open,
             patch("shutil.move") as _mock_shutil_move,
         ):
-            test_args = Namespace(
-                input=test_file,
-                output=self.test_filepath / "SAVE.convert",
-                convert_format=ConvertFormat(SaveFormat.PS3, SaveFormat.PC),
-                patch_dlc_item_checks=False,
+            parser = ArgumentParser(
+                description="Test Parser",
+            )
+            add_commands(parser)
+            test_args = parser.parse_args(
+                [
+                    "-i",
+                    str(test_file),
+                    "-o",
+                    str(self.test_filepath / "SAVE.convert"),
+                    "-f",
+                    str(PS3_TO_PC_CONVERT_FORMAT),
+                    "--no-patch-dlc-item-checks",
+                ]
             )
 
             # Convert from PS3 to PC save
-            self.assertTrue(start_convert(test_args))
+            self.assertTrue(test_args.func(test_args))
             self.assertEqual(len(test_bytes), VESPERIA_PC_SAVE_SIZE)
             # Now convert from PC save back to PS3 save
             pc_converted_bytes = test_bytes.copy()
@@ -73,7 +83,7 @@ class TestConvertVesperiaSave(TestCase):
                 return BytesIO(pc_converted_bytes)
 
             mock_open_method.side_effect = redirect_input_from_byte_io
-            test_args.convert_format = ConvertFormat(SaveFormat.PC, SaveFormat.PS3)
+            test_args.convert_format = PC_TO_PS3_CONVERT_FORMAT
             self.assertTrue(start_convert(test_args))
             self.assertEqual(len(test_bytes), VESPERIA_PS3_SAVE_SIZE)
             self.assertSequenceEqual(expected_ps3_save_bytes, test_bytes)
