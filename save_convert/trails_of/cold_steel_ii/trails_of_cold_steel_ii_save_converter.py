@@ -23,10 +23,10 @@ from save_convert.trails_of.trails_of_cold_steel_base_converter import (
     add_argparse_commands,
 )
 
-logger = logging.getLogger("cold_steel_ii_save_converter")
-logger.setLevel(logging.INFO)
+LOGGER = logging.getLogger("cold_steel_ii_save_converter")
+LOGGER.setLevel(logging.INFO)
 stdoutHandler = logging.StreamHandler()
-logger.addHandler(stdoutHandler)
+LOGGER.addHandler(stdoutHandler)
 
 TRAILS_OF_COLD_STEEL_II_PS4_SAVE_SIZE = 496880
 # The Normal PC Save is 2904 bytes smaller than PS4
@@ -185,6 +185,8 @@ class SaveConvertColdSteelII(SaveConvertColdSteelBase):
 
 ### Start of argument parser setup
 def start_convert(args: argparse.Namespace):
+    if hasattr(args, "loglevel"):
+        LOGGER.setLevel(args.loglevel)
     save_converter = SaveConvertColdSteelII(args)
     return save_converter.convert()
 
@@ -208,7 +210,7 @@ def main():
     if hasattr(args, "func"):
         response = args.func(args)
     else:
-        logger.error("No convert function is set")
+        LOGGER.error("No convert function is set")
         response = False
 
     sys.exit(response)

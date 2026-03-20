@@ -23,10 +23,10 @@ from save_convert.trails_of.trails_of_cold_steel_base_converter import (
     add_argparse_commands,
 )
 
-logger = logging.getLogger("reverie_save_converter")
-logger.setLevel(logging.INFO)
+LOGGER = logging.getLogger("reverie_save_converter")
+LOGGER.setLevel(logging.INFO)
 stdoutHandler = logging.StreamHandler()
-logger.addHandler(stdoutHandler)
+LOGGER.addHandler(stdoutHandler)
 
 # This is the size of the PS4 save after decompression
 TRAILS_INTO_REVERIE_PS4_SAVE_SIZE = 1724096
@@ -138,7 +138,8 @@ class SaveConvertReverie(SaveConvertColdSteelChecksumBase):
                 " This is a code issue and needs to be fixed by a developer"
             )
 
-        # The PS4 and PS5 files are the exact same format  so use the same conversion table for PS5 <-> PC
+        # The PS4 and PS5 files are the exact same format so use the same conversion table for PS5 <-> PC
+        # Now generate the reverse mapping of PC -> PS4 conversion
         new_patch_table.convert_format_to_patch_set[PC_TO_PS4_CONVERT_FORMAT] = (
             new_patch_table.convert_format_to_patch_set[PS4_TO_PC_CONVERT_FORMAT].generate_reverse_set()
         )
@@ -148,7 +149,6 @@ class SaveConvertReverie(SaveConvertColdSteelChecksumBase):
         new_patch_table.convert_format_to_patch_set[PS5_TO_PC_CONVERT_FORMAT] = (
             new_patch_table.convert_format_to_patch_set[PS4_TO_PC_CONVERT_FORMAT]
         )
-        # Now generate the reverse mapping of PC -> PS4 conversion
         # Fill the patch table entries with offset ranges mappings from [0x0, <platform-save-size>) that copies the data
         new_patch_table.fill_uncovered_target_offset_ranges(
             lambda target_offset, source_range: PatchCopyBytes(target_offset, source_range=source_range)
@@ -159,6 +159,8 @@ class SaveConvertReverie(SaveConvertColdSteelChecksumBase):
 
 ### Start of argument parser setup
 def start_convert(args: argparse.Namespace):
+    if hasattr(args, "loglevel"):
+        LOGGER.setLevel(args.loglevel)
     save_converter = SaveConvertReverie(args)
     return save_converter.convert()
 
@@ -190,7 +192,7 @@ def main():
     if hasattr(args, "func"):
         response = args.func(args)
     else:
-        logger.error("No convert function is set")
+        LOGGER.error("No convert function is set")
         response = False
 
     sys.exit(response)

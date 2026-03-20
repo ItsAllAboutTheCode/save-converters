@@ -17,10 +17,10 @@ from save_convert.save_converter_base import (
     SaveConvertBase,
 )
 
-logger = logging.getLogger("cold_steel_base_save_converter")
-logger.setLevel(logging.INFO)
+LOGGER = logging.getLogger("cold_steel_base_save_converter")
+LOGGER.setLevel(logging.INFO)
 stdoutHandler = logging.StreamHandler()
-logger.addHandler(stdoutHandler)
+LOGGER.addHandler(stdoutHandler)
 
 # Reversed CRC32 polynomial used for checksuming Cold Steel IV and Reverie saves
 TRAILS_OF_CRC32_POLYNOMIAL = 0xEDB88320
@@ -49,7 +49,7 @@ def decompress_zstd(input_data: bytes) -> tuple[bytes, bool]:
     zstd_magic = int.from_bytes(input_data[in_offset : in_offset + 4], byteorder="little")
     in_offset += 4
     if zstd_magic != TRAILS_OF_ZSTD_MAGIC_BYTES:
-        logger.info(
+        LOGGER.debug(
             "File is not compressed using ZStandard. Skipping ZStandard decompression",
         )
         return input_data, False
@@ -57,10 +57,10 @@ def decompress_zstd(input_data: bytes) -> tuple[bytes, bool]:
     try:
         result_data = zstd.decompress(input_data)
     except zstd.ZstdError as err:
-        logger.info(f"ZStandard decompressor raised error: {err}")
+        LOGGER.error(f"ZStandard decompressor raised error: {err}")
         return input_data, False
 
-    logger.info("File was compressed using ZStandard. It has been successfully decompressed")
+    LOGGER.debug("File was compressed using ZStandard. It has been successfully decompressed")
     return result_data, True
 
 
@@ -78,7 +78,7 @@ def decompress_type1(input_data: bytes) -> tuple[bytes, bool]:
     decompressed_size = int.from_bytes(input_data[in_offset : in_offset + 4], byteorder="little")
     in_offset += 4
     if not (TRAILS_OF_MIN_DECOMPRESS_SIZE <= decompressed_size <= TRAILS_OF_MAX_DECOMPRESS_SIZE):
-        logger.info(
+        LOGGER.debug(
             "Candidate decompressed size is not in the correct size range to be compressed."
             " The input data is assumed to be uncompressed",
         )
@@ -93,7 +93,7 @@ def decompress_type1(input_data: bytes) -> tuple[bytes, bool]:
     in_offset += 4
 
     if compressed_buffer_size != len(input_data):
-        logger.info(
+        LOGGER.debug(
             "Candidate compressed size in the input file does not match the size of the input data."
             " The input data is assumed to be uncompressed",
         )
@@ -106,7 +106,7 @@ def decompress_type1(input_data: bytes) -> tuple[bytes, bool]:
 
     while in_offset < compressed_buffer_size:
         if dec_offset >= decompressed_size:
-            logger.info(
+            LOGGER.debug(
                 f"Offset in the decompression buffer {dec_offset} is larger than"
                 f" the calcualated decompressed size {decompressed_size}\n"
                 "The input data is assumed to be uncompressed",
@@ -114,7 +114,7 @@ def decompress_type1(input_data: bytes) -> tuple[bytes, bool]:
             return input_data, False
 
         if in_offset >= len(input_data):
-            logger.info(
+            LOGGER.debug(
                 f"Offset in the input_data buffer {in_offset} is greater than the loaded input save"
                 f" {len(input_data)}\n"
                 "The input data is assumed to be uncompressed",
@@ -125,7 +125,7 @@ def decompress_type1(input_data: bytes) -> tuple[bytes, bool]:
         in_offset += 1
         if input_byte == backref_int32:
             if in_offset >= len(input_data):
-                logger.info(
+                LOGGER.debug(
                     f"Offset in the input_data buffer {in_offset} is greater than the loaded input save"
                     f" {len(input_data)}\n"
                     "The input data is assumed to be uncompressed",
@@ -143,13 +143,13 @@ def decompress_type1(input_data: bytes) -> tuple[bytes, bool]:
                     backref_offset -= 1
 
                 if backref_offset == 0:
-                    logger.info(
+                    LOGGER.debug(
                         "Back reference offset is 0, A compressed file should not have that value\n"
                         "The input data is assumed to be uncompressed",
                     )
                     return input_data, False
                 if in_offset >= len(input_data):
-                    logger.info(
+                    LOGGER.debug(
                         f"Offset in the input_data buffer {in_offset} is greater than the loaded input save"
                         f" {len(input_data)}\n"
                         "The input data is assumed to be uncompressed",
@@ -161,20 +161,20 @@ def decompress_type1(input_data: bytes) -> tuple[bytes, bool]:
 
                 if backref_size > 0:
                     if dec_offset < backref_offset:
-                        logger.info(
+                        LOGGER.debug(
                             f"Back reference offset {backref_offset} is larger than than current decompression"
                             f" buffer offset {dec_offset}\n"
                             "The input data is assumed to be uncompressed",
                         )
                         return input_data, False
                     if dec_offset + backref_size > TRAILS_OF_MAX_DECOMPRESS_SIZE:
-                        logger.info(
+                        LOGGER.debug(
                             f"Decompression buffer offset + back reference bytes size {dec_offset + backref_offset}"
                             " would result in decompressed size larger than the max decompression size"
                             f" {TRAILS_OF_MAX_DECOMPRESS_SIZE}\nThe input data is assumed to be uncompressed",
                         )
                     if dec_offset + backref_size > decompressed_size:
-                        logger.info(
+                        LOGGER.debug(
                             f"Decompression buffer offset + back reference bytes size {dec_offset + backref_offset}"
                             f" would result in decompressed size larger than the calculated decompressed size"
                             f" {decompressed_size}\n"
@@ -196,14 +196,14 @@ def decompress_type1(input_data: bytes) -> tuple[bytes, bool]:
             dec_offset += 1
 
     if dec_offset != decompressed_size:
-        logger.info(
+        LOGGER.debug(
             "The complete decompression buffer size does not match the calculated decompressed size from the input file"
             f"\nexpected: {decompressed_size}, actual: {dec_offset}",
         )
         return input_data, False
 
     output_bytes = bytes(decompress_buffer)
-    logger.info("File was compressed using Falcom Type1 algorithm. It has been successfully decompressed")
+    LOGGER.debug("File was compressed using Falcom Type1 algorithm. It has been successfully decompressed")
     return output_bytes, True
 
 
@@ -326,15 +326,15 @@ class SaveConvertColdSteelChecksumBase(SaveConvertColdSteelFilesizeBase, ABC):
 
 
 def add_argparse_commands(parser: argparse.ArgumentParser) -> None:
-    # Add general connection arguments
-    parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
+    # Add general arguments
+    _ = parser.add_argument(
         "--input",
         "-i",
         type=pathlib.Path,
         help="Input path to save file",
         required=True,
     )
-    parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
+    _ = parser.add_argument(
         "--output",
         "-o",
         type=pathlib.Path,
@@ -366,7 +366,7 @@ def add_argparse_commands(parser: argparse.ArgumentParser) -> None:
             else:
                 raise ValueError(f"Value {values} is not an appropriate choice for argument {options_string}")
 
-    parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
+    _ = parser.add_argument(
         "--convert-format",
         "-f",
         action=ConvertFormatAction,
@@ -375,10 +375,18 @@ def add_argparse_commands(parser: argparse.ArgumentParser) -> None:
         help="Specifies the input file save format and what should the output file format should be.",
     )
 
-    parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
+    _ = parser.add_argument(
         "--decompress-only",
         "-d",
         action="store_true",
         help="Decompress the input file if compressed, does not perform format conversion.\n"
         "File extension will be <input-path>.dec if --output option is not set",
+    )
+
+    _ = parser.add_argument(
+        "--loglevel",
+        "-l",
+        default=logging.INFO,
+        choices=logging.getLevelNamesMapping(),
+        help="Set log level for converter",
     )
