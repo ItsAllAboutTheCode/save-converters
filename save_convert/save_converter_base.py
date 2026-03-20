@@ -17,15 +17,15 @@ from io import BytesIO
 from itertools import islice
 from typing import NamedTuple, Protocol, cast, override
 
-logger = logging.getLogger("save_converter_base")
-logger.setLevel(logging.INFO)
+LOGGER = logging.getLogger("save_converter_base")
+LOGGER.setLevel(logging.INFO)
 stdoutHandler = logging.StreamHandler()
-logger.addHandler(stdoutHandler)
+LOGGER.addHandler(stdoutHandler)
 
 SCRIPT_NAME = pathlib.Path(__file__).name
 
 
-@dataclass(order=True, frozen=True)
+@dataclass(order=True)
 class Range:
     """Represents a range offsets within a file.
     The start value is inclusive and the end value is exclusive.
@@ -37,11 +37,18 @@ class Range:
 
     def __post_init__(self):
         if self.end < self.start:
-            setattr(self, "start", self.end)
-            setattr(self, "end", self.start)
+            self.start, self.end = self.end, self.start
 
     def __len__(self) -> int:
         return self.end - self.start
+
+    @override
+    def __str__(self) -> str:
+        return f"[{self.start}, {self.end})"
+
+    @override
+    def __format__(self, format_spec) -> str:
+        return f"[{self.start.__format__(format_spec)}, {self.end.__format__(format_spec)})"
 
 
 class PatchRange(NamedTuple):
@@ -168,6 +175,10 @@ class PatchBase(ABC):
         Then it covers the range [0x10, 0x18)
         """
         return self._source_range
+
+    @override
+    def __repr__(self) -> str:
+        return f"covered range: target={self.get_target_covered_range()}, source={self.get_source_covered_range()}"
 
     @property
     def target_offset(self) -> int:
@@ -584,20 +595,27 @@ class PatchSet:
                     Range(active_patch_range.target_range.start, next_range.target_range.end),
                     Range(active_patch_range.source_range.start, next_range.source_range.end),
                 )
+            elif active_patch_range.target_range.end > next_range.target_range.start:
+                LOGGER.error(
+                    f"Covered patch offset {active_patch_range.target_range:#x} overlaps the next patch"
+                    f" offset {next_range.target_range:#x}"
+                )
+                active_patch_range = PatchRange(
+                    Range(active_patch_range.target_range.start, next_range.target_range.end),
+                    Range(active_patch_range.source_range.start, next_range.source_range.end),
+                )
             else:
                 # The start of the next range is discontinuous with the end of the active range therefore
                 # 1. append the active_patch_range to the covered_range_set (if it is not empty)
                 # 2. set the active_patch_range to be the next range
-                if len(active_patch_range) > 0:
-                    covered_range_set.append(active_patch_range)
+                covered_range_set.append(active_patch_range)
                 active_patch_range = next_range
 
-        if len(active_patch_range) > 0:
-            covered_range_set.append(active_patch_range)
+        covered_range_set.append(active_patch_range)
 
         return covered_range_set
 
-    def get_unconvered_patch_range_set(self, target_range: Range, source_range: Range) -> list[PatchRange]:
+    def get_uncovered_patch_range_set(self, target_range: Range, source_range: Range) -> list[PatchRange]:
         """
         Return the set of continuous target range offsets NOT covered by the Patch Set
         """
@@ -651,7 +669,7 @@ class PatchSet:
         will be added that maps to the supplied function.
 
         """
-        uncovered_patch_range_set: list[PatchRange] = self.get_unconvered_patch_range_set(target_range, source_range)
+        uncovered_patch_range_set: list[PatchRange] = self.get_uncovered_patch_range_set(target_range, source_range)
         if not uncovered_patch_range_set:
             # The entire range is covered, nothing to do
             return
@@ -674,7 +692,7 @@ class PatchSet:
         and the string contains any error messages in the case of unsuccessful validation
         """
 
-        uncovered_patch_range_set: list[PatchRange] = self.get_unconvered_patch_range_set(target_range, source_range)
+        uncovered_patch_range_set: list[PatchRange] = self.get_uncovered_patch_range_set(target_range, source_range)
         if not uncovered_patch_range_set:
             return True, ""
 
@@ -763,10 +781,12 @@ class SaveConvertBase(ABC):
     def __init__(self, args: argparse.Namespace):
         self._input_path = cast(pathlib.Path, args.input)
         self._convert_format = cast(ConvertFormat, args.convert_format)
+        self._input_data = b""
+        self._output_io = BytesIO()  # Create a in-memory binary IO buffer for storing output data
         output_path: pathlib.Path | None = args.output
         if not output_path:
             output_path = self._input_path.with_suffix(f"{self._input_path.suffix}.{self._convert_format.target}")
-            logger.info(f'No Output path specified, it has been set to "{output_path}"')
+            LOGGER.info(f'No Output path specified, it has been set to "{output_path}"')
 
         self._output_path = output_path
         self._patch_table = self.create_save_patch_table()
@@ -774,17 +794,17 @@ class SaveConvertBase(ABC):
     def convert(self) -> bool:
         op_result = self._pre_convert()
         if not op_result:
-            logger.error(f"Pre-convert failed when running {__class__.__name__} converter")
+            LOGGER.error(f"Pre-convert failed when running {__class__.__name__} converter")  # type:ignore[name-defined]
             return False
 
         op_result = self._convert()
         if not op_result:
-            logger.error(f"Convert failed when running {__class__.__name__} converter")
+            LOGGER.error(f"Convert failed when running {__class__.__name__} converter")  # type:ignore[name-defined]
             return False
 
         op_result = self._post_convert()
         if not op_result:
-            logger.error(f"Post-Convert failed when running {__class__.__name__} converter")
+            LOGGER.error(f"Post-Convert failed when running {__class__.__name__} converter")  # type:ignore[name-defined]
             return False
 
         return True
@@ -797,7 +817,7 @@ class SaveConvertBase(ABC):
             try:
                 self._input_data = infile.read()
             except BlockingIOError as err:
-                logger.error(f"Unable to read data from input file {self._input_path}: {err}")
+                LOGGER.error(f"Unable to read data from input file {self._input_path}: {err}")
                 return False
 
         return True
@@ -811,20 +831,20 @@ class SaveConvertBase(ABC):
         convert_patch_set: PatchSet = self._patch_table.get_patch_set_for_convert_format(self._convert_format)
         target_save_size = self._patch_table.get_save_size_for_format(self._convert_format.target)
         if not target_save_size:
-            logger.error(
+            LOGGER.error(
                 f"Target save format {self._convert_format.target} does not have an expected save size mapped.\n"
                 f"It will be assumed to be {sys.maxsize}",
             )
             target_save_size = sys.maxsize
 
-        self._output_io = BytesIO()  # Create a in-memory binary IO buffer for storing output data
+        self._output_io = BytesIO()
         patch_index = 0
 
-        result = PatchOperationResult(
+        result: PatchOperationResult = PatchOperationResult(
             target_data=b"", target_write_offset=0, new_source_offset=0, patch_complete=PatchOperationState.Skip
         )
         while result.target_write_offset < target_save_size:
-            result: PatchOperationResult = self.process_input_savedata(
+            result = self.process_input_savedata(
                 result,
                 source_data=self._input_data,
                 patch_set=convert_patch_set,
@@ -834,25 +854,25 @@ class SaveConvertBase(ABC):
 
             try:
                 if self._output_io.tell() != result.target_write_offset:
-                    logger.error(
+                    LOGGER.error(
                         f"Target write offset 0x{result.target_write_offset:X} does not match the end of the' \
                         f' ByteIO buffer. ByteIO buffer offset: 0x{self._output_io.tell():X}",
                     )
                     return False
                 elif self._output_io.write(result.target_data) != len(result.target_data):
-                    logger.error(
+                    LOGGER.error(
                         f"Unable to write {len(result.target_data)} bytes to output.\n"
                         f" ByteIO buffer offset: 0x{self._output_io.tell():X}",
                     )
                     return False
             except OSError as _err:
-                logger.exception("Failed to write to output\n")
+                LOGGER.exception("Failed to write to output\n")
                 return False
 
             # If no progress has been made in the processing of the input data
             # Then return to prevent an infinite loop
             if result.patch_complete == PatchOperationState.Skip:
-                logger.error(
+                LOGGER.error(
                     "Failed to to make progress processing source data, target stream has stopped writing"
                     f" at offset: 0x{self._output_io.tell():X}\nPatch Operation failed at index {patch_index}"
                     f" for conversion of {self._convert_format}:\n"
@@ -877,6 +897,8 @@ class SaveConvertBase(ABC):
                 if outfile.write(byte_buffer) != len(byte_buffer):
                     raise IOError(f"Failed to write {len(byte_buffer)} to output file. Aborting...")
                 self._output_io.close()
+
+            self._output_path.parent.mkdir(parents=True, exist_ok=True)
             return bool(shutil.move(tmp_output_path, self._output_path))
 
     @abstractmethod
