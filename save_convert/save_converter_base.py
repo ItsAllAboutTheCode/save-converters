@@ -5,7 +5,6 @@ used to perform save patching from a source -> target platform
 import argparse
 import bisect
 import logging
-import pathlib
 import shutil
 import sys
 import tempfile
@@ -15,14 +14,15 @@ from dataclasses import dataclass
 from enum import Enum, StrEnum
 from io import BytesIO
 from itertools import islice
-from typing import NamedTuple, Protocol, cast, override
+from pathlib import Path
+from typing import NamedTuple, Protocol, override
 
 LOGGER = logging.getLogger("save_converter_base")
 LOGGER.setLevel(logging.INFO)
 stdoutHandler = logging.StreamHandler()
 LOGGER.addHandler(stdoutHandler)
 
-SCRIPT_NAME = pathlib.Path(__file__).name
+SCRIPT_NAME = Path(__file__).name
 
 
 @dataclass(order=True)
@@ -71,6 +71,7 @@ class SaveFormat(StrEnum):
     PS4 = "ps4"
     PS5 = "ps5"
     PC = "pc"
+    UNK = "unknown"
 
 
 @dataclass(order=True, frozen=True)
@@ -97,6 +98,7 @@ PS4_TO_PC_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS4, target=SaveForma
 PC_TO_PS4_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PC, target=SaveFormat.PS4)
 PS3_TO_PC_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS3, target=SaveFormat.PC)
 PC_TO_PS3_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PC, target=SaveFormat.PS3)
+UNKNOWN_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.UNK, target=SaveFormat.UNK)
 
 
 class PatchOperationState(Enum):
@@ -766,43 +768,24 @@ class ConvertPatchTable:
         return valid, error_messages
 
 
-class SaveConvertBase(ABC):
+class SaveBase(ABC):
     """
-    Base Class used to convert a save from a source platform format to a target platform format
+    Base Class that can be used for any custom logic
+    (Read data from a save, converting, decrypting/encryption, etc...)
     """
 
-    _input_path: pathlib.Path
-    _output_path: pathlib.Path
-    _convert_format: ConvertFormat
-    _input_data: bytes
-    _output_io: BytesIO
-    _patch_table: ConvertPatchTable
-
-    def __init__(self, args: argparse.Namespace):
-        self._input_path = cast(pathlib.Path, args.input)
-        self._convert_format = cast(ConvertFormat, args.convert_format)
-        self._input_data = b""
-        self._output_io = BytesIO()  # Create a in-memory binary IO buffer for storing output data
-        output_path: pathlib.Path | None = args.output
-        if not output_path:
-            output_path = self._input_path.with_suffix(f"{self._input_path.suffix}.{self._convert_format.target}")
-            LOGGER.info(f'No Output path specified, it has been set to "{output_path}"')
-
-        self._output_path = output_path
-        self._patch_table = self.create_save_patch_table()
-
-    def convert(self) -> bool:
-        op_result = self._pre_convert()
+    def transform(self) -> bool:
+        op_result = self._pre_transform()
         if not op_result:
             LOGGER.error(f"Pre-convert failed when running {__class__.__name__} converter")  # type:ignore[name-defined]
             return False
 
-        op_result = self._convert()
+        op_result = self._transform()
         if not op_result:
             LOGGER.error(f"Convert failed when running {__class__.__name__} converter")  # type:ignore[name-defined]
             return False
 
-        op_result = self._post_convert()
+        op_result = self._post_transform()
         if not op_result:
             LOGGER.error(f"Post-Convert failed when running {__class__.__name__} converter")  # type:ignore[name-defined]
             return False
@@ -810,7 +793,40 @@ class SaveConvertBase(ABC):
         return True
 
     @abstractmethod
-    def _pre_convert(self) -> bool:
+    def _pre_transform(self) -> bool:
+        """Implement to pre-load the save data before parsing"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def _transform(self) -> bool:
+        """Implement to parse the save data"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def _post_transform(self) -> bool:
+        """Implement to perform action with parsed save data"""
+        raise NotImplementedError
+
+
+class SaveTransformBase(SaveBase, ABC):
+    """
+    Base Class for save transformation from a source file to a targe file
+    """
+
+    _input_path: Path
+    _output_path: Path
+    _input_data: bytes
+    _output_io: BytesIO
+
+    def __init__(self, args: argparse.Namespace):
+        self._input_path = args.input
+        self._output_path = args.output
+        self._input_data = b""
+        self._output_io = BytesIO()  # Create a in-memory binary IO buffer for storing output data
+
+    @override
+    @abstractmethod
+    def _pre_transform(self) -> bool:
         """Pre-load save data from the input file into memory"""
         # Read the entire save into memory
         with self._input_path.open("rb") as infile:
@@ -822,8 +838,88 @@ class SaveConvertBase(ABC):
 
         return True
 
+    @override
     @abstractmethod
-    def _convert(self) -> bool:
+    def _transform(self) -> bool:
+        """Default implementation just copies the save file to the output buffer"""
+        return self._output_io.write(self._input_data) == len(self._input_data)
+
+    @override
+    @abstractmethod
+    def _post_transform(self) -> bool:
+        """Writes the output data to the destination file atomically"""
+        # Now copy temporary output file to destination
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_output_path = Path(f"{tmpdir}/{self._output_path.name}").resolve()
+            with tmp_output_path.open("wb") as outfile:
+                byte_buffer = self._output_io.getvalue()
+                if outfile.write(byte_buffer) != len(byte_buffer):
+                    raise IOError(f"Failed to write {len(byte_buffer)} to output file. Aborting...")
+                self._output_io.close()
+
+            self._output_path.parent.mkdir(parents=True, exist_ok=True)
+            return bool(shutil.move(tmp_output_path, self._output_path))
+
+    def process_input_savedata(
+        self,
+        input_result: PatchOperationResult,
+        source_data: bytes,
+        patch_set: PatchSet,
+        current_patch_index: int,
+        convert_format: ConvertFormat,
+    ) -> PatchOperationResult:
+        """Process the input data to determine how it should be written to the output
+        It checks the offset against the patch_set to see if it contains a functor that can replace
+        the data from the input offset into and output buffer
+
+        :param: offset Offset being examined from the input save data
+        :param: input_data Data from the input save file
+        :param: patch_set Ordered list of offset range -> patch functors
+                This set is used to patch data at the offset range
+        :param: current_patch_index Index in the patch set to start to search for the offset within
+                This value gets updated by this method and returned. It should initially be set to 0
+                and then passed back into this method every iteration.
+
+        :return: PatchOperationResult set (bytes_to_write_to_output, updated_input_offset,
+                replacement status for the current input range)
+        """
+
+        if patch_entry := patch_set.find_next_patch_entry(
+            input_result.target_write_offset, start_index=current_patch_index
+        ):
+            output_result = patch_entry(source_data, input_result.new_source_offset, convert_format)
+            return output_result
+
+        return PatchOperationResult(
+            target_data=b"",
+            target_write_offset=input_result.target_write_offset,
+            new_source_offset=input_result.new_source_offset,
+            patch_complete=PatchOperationState.Skip,
+        )
+
+
+class SaveConvertBase(SaveTransformBase, ABC):
+    """
+    Base Class used to convert a save from a source platform format to a target platform format
+    """
+
+    _convert_format: ConvertFormat
+    _patch_table: ConvertPatchTable
+
+    def __init__(self, args: argparse.Namespace):
+        super().__init__(args)
+        self._convert_format = getattr(args, "convert_format", UNKNOWN_CONVERT_FORMAT)
+        if not self._output_path:
+            self._output_path: Path = self._input_path.with_suffix(
+                f"{self._input_path.suffix}.{self._convert_format.target}"
+            )
+            LOGGER.debug(f'No Output path specified, it has updated to "{self._output_path}"')
+
+        self._patch_table = self.create_save_patch_table()
+
+    @override
+    @abstractmethod
+    def _transform(self) -> bool:
         """Iterates over the input save file, attempting byte replacements from the source save format
         in order to convert the target save format
         """
@@ -837,7 +933,8 @@ class SaveConvertBase(ABC):
             )
             target_save_size = sys.maxsize
 
-        self._output_io = BytesIO()
+        # Reset Output iO object every time convet is called
+        self._output_io: BytesIO = BytesIO()
         patch_index = 0
 
         result: PatchOperationResult = PatchOperationResult(
@@ -887,57 +984,21 @@ class SaveConvertBase(ABC):
         return True
 
     @abstractmethod
-    def _post_convert(self) -> bool:
-        """Writes the output data to the destination file atomically"""
-        # Now copy temporary output file to destination
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmp_output_path = pathlib.Path(f"{tmpdir}/{self._output_path.name}").resolve()
-            with tmp_output_path.open("wb") as outfile:
-                byte_buffer = self._output_io.getvalue()
-                if outfile.write(byte_buffer) != len(byte_buffer):
-                    raise IOError(f"Failed to write {len(byte_buffer)} to output file. Aborting...")
-                self._output_io.close()
-
-            self._output_path.parent.mkdir(parents=True, exist_ok=True)
-            return bool(shutil.move(tmp_output_path, self._output_path))
-
-    @abstractmethod
     def create_save_patch_table(self) -> ConvertPatchTable:
         return ConvertPatchTable(convert_format_to_patch_set={}, save_format_to_save_size_dict={})
 
-    def process_input_savedata(
-        self,
-        input_result: PatchOperationResult,
-        source_data: bytes,
-        patch_set: PatchSet,
-        current_patch_index: int,
-        convert_format: ConvertFormat,
-    ) -> PatchOperationResult:
-        """Process the input data to determine how it should be written to the output
-        It checks the offset against the patch_set to see if it contains a functor that can replace
-        the data from the input offset into and output buffer
 
-        :param: offset Offset being examined from the input save data
-        :param: input_data Data from the input save file
-        :param: patch_set Ordered list of offset range -> patch functors
-                This set is used to patch data at the offset range
-        :param: current_patch_index Index in the patch set to start to search for the offset within
-                This value gets updated by this method and returned. It should initially be set to 0
-                and then passed back into this method every iteration.
+class SaveCryptBase(SaveTransformBase, ABC):
+    """
+    Base Class used to (en)decrypt a save for the save format
+    """
 
-        :return: PatchOperationResult set (bytes_to_write_to_output, updated_input_offset,
-                replacement status for the current input range)
-        """
+    _save_format: SaveFormat
 
-        if patch_entry := patch_set.find_next_patch_entry(
-            input_result.target_write_offset, start_index=current_patch_index
-        ):
-            output_result = patch_entry(source_data, input_result.new_source_offset, convert_format)
-            return output_result
+    def __init__(self, args: argparse.Namespace):
+        super().__init__(args)
+        self._save_format = getattr(args, "save_format", SaveFormat.UNK)
 
-        return PatchOperationResult(
-            target_data=b"",
-            target_write_offset=input_result.target_write_offset,
-            new_source_offset=input_result.new_source_offset,
-            patch_complete=PatchOperationState.Skip,
-        )
+        if not self._output_path:
+            self._output_path: Path = self._input_path.with_suffix(f"{self._input_path.suffix}.{self._save_format}")
+            LOGGER.debug(f'No Output path specified, it has updated to "{self._output_path}"')

@@ -167,7 +167,7 @@ def start_convert(args: argparse.Namespace):
     if hasattr(args, "log_level"):
         LOGGER.setLevel(args.log_level)
     save_converter = SaveConvertColdSteelIII(args)
-    return save_converter.convert()
+    return save_converter.transform()
 
 
 def add_commands(parser: argparse.ArgumentParser) -> None:

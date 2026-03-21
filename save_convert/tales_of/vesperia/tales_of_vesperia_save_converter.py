@@ -232,16 +232,16 @@ class SaveConvertVesperia(SaveConvertBase):
         super().__init__(args)
 
     @override
-    def _pre_convert(self) -> bool:
-        return super()._pre_convert()
+    def _pre_transform(self) -> bool:
+        return super()._pre_transform()
 
     @override
-    def _convert(self) -> bool:
-        return super()._convert()
+    def _transform(self) -> bool:
+        return super()._transform()
 
     @override
-    def _post_convert(self) -> bool:
-        return super()._post_convert()
+    def _post_transform(self) -> bool:
+        return super()._post_transform()
 
     @override
     def create_save_patch_table(self) -> ConvertPatchTable:
@@ -525,7 +525,7 @@ def start_convert(args: argparse.Namespace):
     if hasattr(args, "log_level"):
         LOGGER.setLevel(args.log_level)
     save_converter = SaveConvertVesperia(args)
-    return save_converter.convert()
+    return save_converter.transform()
 
 
 def add_commands(parser: argparse.ArgumentParser) -> None:

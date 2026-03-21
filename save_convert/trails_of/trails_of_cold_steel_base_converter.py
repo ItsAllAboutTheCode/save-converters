@@ -237,8 +237,8 @@ class SaveConvertColdSteelBase(SaveConvertBase, ABC):
             self._output_path: pathlib.Path = self._input_path.with_suffix(f"{self._input_path.suffix}.dec")
 
     @override
-    def _pre_convert(self) -> bool:
-        if not super()._pre_convert():
+    def _pre_transform(self) -> bool:
+        if not super()._pre_transform():
             return False
 
         # Attempt to decompress the save data if it is compressed
@@ -246,17 +246,17 @@ class SaveConvertColdSteelBase(SaveConvertBase, ABC):
         return True
 
     @override
-    def _convert(self) -> bool:
+    def _transform(self) -> bool:
         if self._decompress_only:
             # Copy decompress bytes to output buffer
             self._output_io: BytesIO = BytesIO()
             _ = self._output_io.write(self._input_data)
             return True
-        return super()._convert()
+        return super()._transform()
 
     @override
-    def _post_convert(self) -> bool:
-        return super()._post_convert()
+    def _post_transform(self) -> bool:
+        return super()._post_transform()
 
 
 def build_crc_table(crc32_poly: int = TRAILS_OF_CRC32_POLYNOMIAL):
@@ -289,7 +289,7 @@ class SaveConvertColdSteelFilesizeBase(SaveConvertColdSteelBase, ABC):
     FILESIZE_OFFSET: int = 8
 
     @override
-    def _post_convert(self) -> bool:
+    def _post_transform(self) -> bool:
         """Fixes the filesize for Trails of Cold Steel III/IV/Reverie"""
         byte_view = self._output_io.getbuffer()
         filesize = len(byte_view)
@@ -297,7 +297,7 @@ class SaveConvertColdSteelFilesizeBase(SaveConvertColdSteelBase, ABC):
         byte_view[self.FILESIZE_OFFSET : self.FILESIZE_OFFSET + 4] = filesize.to_bytes(length=4, byteorder="little")
 
         byte_view.release()  # Allow the BytesIO object to be closed
-        return super()._post_convert()
+        return super()._post_transform()
 
 
 class SaveConvertColdSteelChecksumBase(SaveConvertColdSteelFilesizeBase, ABC):
@@ -310,7 +310,7 @@ class SaveConvertColdSteelChecksumBase(SaveConvertColdSteelFilesizeBase, ABC):
     START_SAVEDATA_OFFSET: int = CHECKSUM_OFFSET + 4
 
     @override
-    def _post_convert(self) -> bool:
+    def _post_transform(self) -> bool:
         """Fixes the checksum for Trails of Cold Steel IV/Reverie"""
         byte_view = self._output_io.getbuffer()
         # The save checksum is calculated using the remaining filesize in the file
@@ -322,7 +322,7 @@ class SaveConvertColdSteelChecksumBase(SaveConvertColdSteelFilesizeBase, ABC):
             length=4, byteorder="little"
         )
         byte_view.release()  # Allow the BytesIO object to be closed
-        return super()._post_convert()
+        return super()._post_transform()
 
 
 def add_argparse_commands(parser: argparse.ArgumentParser) -> None:
