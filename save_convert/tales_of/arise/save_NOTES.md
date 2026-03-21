@@ -35,14 +35,14 @@ Right now, known values are:
 I am assuming other platforms occupy bytes 01 and 02.  
 Maybe the other values are variants of PS4, Xbox One, Xbox Series X.
 It is important that the value is correct for the save the platform is expected to load for.  
-Otherwise the XOR cipher against the AES decrypted data would fail and the save load logic would raise an exception
+Otherwise the XOR cipher against the AES decrypted data would fail and the save load logic would raise an exception.  
 
 ### Executable Information
     
-At address 0x332C740 in Tales of Arise.exe is a AES-256 ECB cipher key for decryption of save data
+At address 0x332C740 in Tales of Arise.exe is a AES-256 ECB cipher key for decryption of save data.  
 
 Memory address to Executable offset:  
-Take the memory address, striping the leading 14 from the address and subtract 0x1200 hex to get the offset in the executable file
+Take the memory address, striping the leading 14 from the address and subtract 0x1200 hex to get the offset in the executable file.  
 
 
 ## Debugging PC Save Encryption / Decryption
@@ -55,8 +55,8 @@ SteamDB:    build 12823607 from 12 December 2023
 
 All the offsets are based on that build of the executable
 
-PC Save Decryption starts at instruction 0x1408DA449
-PC Save Encryption starts at instruction 0x1408D9E22
+PC Save Decryption starts at instruction 0x1408DA449  
+PC Save Encryption starts at instruction 0x1408D9E22  
 
 Executable offset on PC 0x1408DA11C points references the bytes that are written for the X0R cipher.  
 The value is a constant 0x100 hex which writes bytes 00 01 to the save, which indicates that save data underwent an XOR cipher before AES encryption.
@@ -64,19 +64,64 @@ The value is a constant 0x100 hex which writes bytes 00 01 to the save, which in
 The encryption section is marked by the read of the Cipher Key at .text section 0x14332D340
 which corresponds to 0x332C740 in the Tales of Arise.exe
 
-Potential PS5 keys
-9QLJPHXZUnG2LJAHXC6wcfHYkBVzSHyB
-JEExTp59i6QP_pg2GK7ZjcW32bJ-XmRW
--53t9cPfnriPcJ-kKcrRaCb6BriUScd
-CXYAXC4YcGMRuRRjBh_D7Ts8MPkZ4G9
+## PS5 Save Key Research
+During Research for Save Keys, the following list
+of bytes came up as potential PS5 keys:  
+`9QLJPHXZUnG2LJAHXC6wcfHYkBVzSHyB`  
+`JEExTp59i6QP_pg2GK7ZjcW32bJ-XmRW`  
+`-53t9cPfnriPcJ-kKcrRaCb6BriUScd`  
+`CXYAXC4YcGMRuRRjBh_D7Ts8MPkZ4G9`  
 
-4A45457854703539693651505F706732474B375A6A63573332624A2D586D5257435859415843345963474D527552526A42685F44375473384D506B5A34473900
-39514C4A5048585A556E47324C4A414858433677636648596B42567A534879422D353374396350666E726950634A2D6B4B637252614362364272695553636400
+The actual save keys and XOR tables are listed in the next section.  
 
-4A45457854703539693651505F706732474B375A6A63573332624A2D586D5257
-435859415843345963474D527552526A42685F44375473384D506B5A34473900
-39514C4A5048585A556E47324C4A414858433677636648596B42567A53487942
-2D353374396350666E726950634A2D6B4B637252614362364272695553636400
+## Save Keys and XOR Cipher Tables
+### PC AES Save Key
+Located at 0x332C740 in Tale of Arise.exe  
+First 32-bytes are cipher key for AES-256 ECB  
+```python
+# b'fgEQ5GbxFXp-mD6tHTZVmiWwgK8PwgK5MfcnGHurirrJY9xVxkd8i-Vy3LD6Rhx\x00'
+bytes.fromhex(
+    "66674551354762784658702D6D443674"  
+    "48545A566D695777674B385077674B35"  
+    "4D66636E474875726972724A59397856"  
+    "786B6438692D5679334C443652687800"
+)
+```
+
+### PC XOR Cipher Table
+64 byte table which is xor'ed with the AES decrypted result to get the decrypted save data.  
+Located at 0x332C780 in Tale of Arise.exe  
+```python
+# b'NjFnSJsNQpiMrnQegcBr5AgrZAGA5gRMkCADNMZR3izEWVR3ZicicXZNsFyKUmr\x00'
+bytes.fromhex(
+    "4E6A466E534A734E5170694D726E5165" 
+    "67634272354167725A4147413567524D"
+    "6B4341444E4D5A5233697A4557565233"
+    "5A69636963585A4E7346794B556D7200"
+)
+```
+
+### PS5 AES Save Key
+```python
+# b'9QLJPHXZUnG2LJAHXC6wcfHYkBVzSHyB-53t9cPfnriPcJ-kKcrRaCb6BriUScd\x00'
+bytes.fromhex(
+    "39514C4A5048585A556E47324C4A4148"
+    "58433677636648596B42567A53487942"
+    "2D353374396350666E726950634A2D6B"
+    "4B637252614362364272695553636400"
+)
+```
+
+### PS5 XOR Cipher Table
+```python
+# b'JEExTp59i6QP_pg2GK7ZjcW32bJ-XmRWCXYAXC4YcGMRuRRjBh_D7Ts8MPkZ4G9\x00'
+bytes.fromhex(
+    "4A45457854703539693651505F706732" # JEExTp59i6QP_pg2GK7ZjcW32bJ-XmRW
+    "474B375A6A63573332624A2D586D5257"
+    "435859415843345963474D527552526A"
+    "42685F44375473384D506B5A34473900"
+)
+```
 
 Eboot.bin offset 0x56D3BF6 looks like the save routine encrypt call
 
@@ -84,8 +129,7 @@ The following code is what was used to find the XOR Cipher table
 After testing out the potential cipher keys
 
 ```python
-# NOTE: No longer needed, I found the encryption key and XOR table
-# using this function
+# NOTE: The PS5 encryption key and XOR table was found this function
 def find_ps5_xor_table_candidates(candidate_ps5_cipher_keys: list[bytes] = [ps5_cipher_key]):
     # Read the decrypted boot file into memory
     eboot_path = Path("/mnt/DataDrive/Hacking/Sony/PS5/Debugging/eboot.bin")
