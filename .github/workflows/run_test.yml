@@ -45,4 +45,24 @@ jobs:
       - name: Check format
         run: |
           source .venv/bin/activate
-          ruff format . --check
+          ruff format --check --diff .
+
+  mypy-checker:
+    name: Mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+      - name: Setup uv
+        uses: hynek/setup-cached-uv@v2
+      - name: Install Python dependencies
+        run: |
+          uv sync --all-extras
+      - name: Perform static analysis
+        run: |
+          source .venv/bin/activate
+          mypy --python-version=3.14 .
+
