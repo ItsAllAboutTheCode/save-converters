@@ -73,6 +73,7 @@ include = [
 [tool.hatch.build.targets.custom]
 dependencies = [
   "pyinstaller",
+  "pycryptodome>=3.23.0"
 ]
 path = "hatch_build.py"
 pyinstaller_spec = "save_converter.spec"

@@ -4,8 +4,6 @@ The scripts in this repo are used for converting decrypted saves of console game
 The list of games of supported games are enumerated in the [How to use](#how-to-use) section below.  
 
 
-
-
 ## How to use
 
 There are various tools that can be used to get decrypted console savedata content.
@@ -17,14 +15,25 @@ There are various tools that can be used to get decrypted console savedata conte
 | PS3 | [Apollo Save Tool (PS3)](https://github.com/bucanero/apollo-ps3) |
 | PS4 | [Apollo Save Tool (PS4)](https://github.com/bucanero/apollo-ps4) |
 | PS5 | [Garlic SaveMgr for PS5](https://github.com/earthonion/garlic-savemgr) |
-| PS5 | [ps5-sd-tool](https://github.com/c0w-ar/ps5-sd-tool) |
 
-### Script Converters
 
-Scripts converters are supported for the following games:
+## Usage
+Available converters can found by running the command  
+```bash
+python save_converter.py --help
+```
+Or if using the executable version of the save converter scrtpt  
+```
+save_converter --help
+```
+
+### Save Converters/Decrypters
+
+Save converters or decrypters are supported for the following games:
 
 | Game | Script | Cheat Tables |
 | :--- | :--- | :-- |
+| Tales of Arise | [tales-of-arise-converter-decrypter](./save_convert/tales_of/arise/README.md) | None |
 | Tales of Vesperia | [tales-of-vesperia-converter](./save_convert/tales_of/vesperia/README.md) | [tales-of-vesperia-cheat-tables](./save_convert/tales_of/vesperia/cheat_tables) |
 | The Legend of Heroes - Trails of Cold Steel I | [trails-of-cold-steel-i-converter](./save_convert/trails_of/cold_steel_i/README.md) | [trails-of-cold-steel-i-cheat-tables](./save_convert/trails_of/cold_steel_i/cheat_tables) |
 | The Legend of Heroes - Trails of Cold Steel II | [trails-of-cold-steel-ii-converter](./save_convert/trails_of/cold_steel_ii/README.md) | [trails-of-cold-steel-ii-cheat-tables](./save_convert/trails_of/cold_steel_ii/cheat_tables) |
@@ -41,11 +50,11 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 Static analysis can be run locally using the `hatch` build tool
 #### Check static analysis
 ```bash
-hatch env run -e lint lint-action
+hatch env run -e lint lint
 ```
 #### Fix lint issues
 ```bash
-hatch env run -e lint lint
+hatch env run -e lint lint-action
 ```
 
 
@@ -60,5 +69,5 @@ All executables on the [Releases](https://github.com/ItsAllAboutTheCode/save-con
 `Trails` save converter requirements: Python 3.14\+
 * This is needed for access to the [Zstandard](https://docs.python.org/3/whatsnew/3.14.html#pep-784-zstandard-support-in-the-standard-library) module.  
 
-`Tales of Vesperia` save converter requirements: Python 3.12\+
+`Tales of` save converters requirements: Python 3.12\+
 
