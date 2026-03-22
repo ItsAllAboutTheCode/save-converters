@@ -14,8 +14,16 @@ from save_convert.save_converter_base import (
     PC_TO_PS5_CONVERT_FORMAT,
     PS4_TO_PC_CONVERT_FORMAT,
     PS5_TO_PC_CONVERT_FORMAT,
+    ConvertFormat,
     SaveConvertBase,
 )
+
+SUPPORTED_CONVERT_FORMATS: list[ConvertFormat] = [
+    PS4_TO_PC_CONVERT_FORMAT,
+    PS5_TO_PC_CONVERT_FORMAT,
+    PC_TO_PS4_CONVERT_FORMAT,
+    PC_TO_PS5_CONVERT_FORMAT,
+]
 
 LOGGER = logging.getLogger("cold_steel_base_save_converter")
 LOGGER.setLevel(logging.INFO)
@@ -355,14 +363,8 @@ def add_argparse_commands(parser: argparse.ArgumentParser) -> None:
             values: Any,
             options_string: str | None = None,
         ):
-            if values == str(PS4_TO_PC_CONVERT_FORMAT):
-                setattr(namespace, self.dest, PS4_TO_PC_CONVERT_FORMAT)
-            elif values == str(PC_TO_PS4_CONVERT_FORMAT):
-                setattr(namespace, self.dest, PC_TO_PS4_CONVERT_FORMAT)
-            elif values == str(PS5_TO_PC_CONVERT_FORMAT):
-                setattr(namespace, self.dest, PS5_TO_PC_CONVERT_FORMAT)
-            elif values == str(PC_TO_PS5_CONVERT_FORMAT):
-                setattr(namespace, self.dest, PC_TO_PS5_CONVERT_FORMAT)
+            if values in [str(format) for format in SUPPORTED_CONVERT_FORMATS]:
+                setattr(namespace, self.dest, ConvertFormat.create_from_string(values))
             else:
                 raise ValueError(f"Value {values} is not an appropriate choice for argument {options_string}")
 
@@ -370,7 +372,7 @@ def add_argparse_commands(parser: argparse.ArgumentParser) -> None:
         "--convert-format",
         "-f",
         action=ConvertFormatAction,
-        choices=[str(PS4_TO_PC_CONVERT_FORMAT), str(PC_TO_PS4_CONVERT_FORMAT)],
+        choices=[str(format) for format in SUPPORTED_CONVERT_FORMATS],
         default=PS4_TO_PC_CONVERT_FORMAT,
         help="Specifies the input file save format and what should the output file format should be.",
     )

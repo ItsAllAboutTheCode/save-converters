@@ -168,14 +168,6 @@ def start_convert(args: argparse.Namespace):
 def add_commands(parser: argparse.ArgumentParser) -> None:
     parser.description = "Save Converter (PS4/PS5<->PC) for Trails into Reverie"
     add_argparse_commands(parser)
-
-    # Update the --convert-format argument to add PS5 choices
-    for action in reversed(parser._actions):
-        if action.dest == "convert_format":
-            if isinstance(action.choices, list):
-                action.choices += [str(PS5_TO_PC_CONVERT_FORMAT), str(PC_TO_PS5_CONVERT_FORMAT)]
-            break
-
     parser.set_defaults(func=start_convert)
 
 

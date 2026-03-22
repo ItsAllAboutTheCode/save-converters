@@ -67,10 +67,13 @@ class RangeNotCoveredException(Exception):
 
 
 class SaveFormat(StrEnum):
+    NSW = "nsw"
     PS3 = "ps3"
     PS4 = "ps4"
     PS5 = "ps5"
     PC = "pc"
+    XBOXONE = "xboxone"
+    XBOXSERIESX = "xboxseriesx"
     UNK = "unknown"
 
 
@@ -91,14 +94,84 @@ class ConvertFormat:
         """
         return f"{self.source}-to-{self.target}"
 
+    @staticmethod
+    def create_from_string(value_string: str) -> ConvertFormat:
+        """Creates a ConvertFormat object from a string
 
+        Raises ValueError if the string is not the correct format
+        """
+
+        value_list = value_string.split("-to-")
+        if len(value_list) != 2:
+            raise ValueError(f"ConvertFormat string {value_string} is missing '-to-' between save format strings")
+
+        if value_list[0] not in SaveFormat:
+            raise ValueError(f"Source Save Format {value_list[0]} is not supported")
+        if value_list[1] not in SaveFormat:
+            raise ValueError(f"Target Save Format {value_list[0]} is not supported")
+
+        return ConvertFormat(source=SaveFormat(value_list[0]), target=SaveFormat(value_list[1]))
+
+    def create_reverse(self) -> ConvertFormat:
+        """Creates a ConvertFormat by swapping the source and target save formats"""
+        return ConvertFormat(source=self.target, target=self.source)
+
+
+UNKNOWN_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.UNK, target=SaveFormat.UNK)
+
+# Conversion formats to/from PC
 PS5_TO_PC_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS5, target=SaveFormat.PC)
 PC_TO_PS5_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PC, target=SaveFormat.PS5)
 PS4_TO_PC_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS4, target=SaveFormat.PC)
 PC_TO_PS4_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PC, target=SaveFormat.PS4)
 PS3_TO_PC_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS3, target=SaveFormat.PC)
 PC_TO_PS3_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PC, target=SaveFormat.PS3)
-UNKNOWN_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.UNK, target=SaveFormat.UNK)
+NSW_TO_PC_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.NSW, target=SaveFormat.PC)
+PC_TO_NSW_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PC, target=SaveFormat.NSW)
+XBOXONE_TO_PC_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXONE, target=SaveFormat.PC)
+PC_TO_XBOXONE_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PC, target=SaveFormat.XBOXONE)
+XBOXSERIESX_TO_PC_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXSERIESX, target=SaveFormat.PC)
+PC_TO_XBOXSERIESX_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PC, target=SaveFormat.XBOXSERIESX)
+
+# Conversion formats to/from PS5
+PS5_TO_PS4_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS5, target=SaveFormat.PS4)
+PS4_TO_PS5_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS4, target=SaveFormat.PS5)
+PS5_TO_PS3_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS5, target=SaveFormat.PS3)
+PS3_TO_PS5_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS3, target=SaveFormat.PS5)
+PS5_TO_NSW_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS5, target=SaveFormat.NSW)
+NSW_TO_PS5_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.NSW, target=SaveFormat.PS5)
+XBOXONE_TO_PS5_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXONE, target=SaveFormat.PS5)
+PS5_TO_XBOXONE_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS5, target=SaveFormat.XBOXONE)
+XBOXSERIESX_TO_PS5_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXSERIESX, target=SaveFormat.PS5)
+PS5_TO_XBOXSERIESX_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS5, target=SaveFormat.XBOXSERIESX)
+
+# Conversion formats to/from PS4
+PS4_TO_PS3_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS4, target=SaveFormat.PS3)
+PS3_TO_PS4_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS3, target=SaveFormat.PS4)
+PS4_TO_NSW_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS4, target=SaveFormat.NSW)
+NSW_TO_PS4_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.NSW, target=SaveFormat.PS4)
+XBOXONE_TO_PS4_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXONE, target=SaveFormat.PS4)
+PS4_TO_XBOXONE_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS4, target=SaveFormat.XBOXONE)
+XBOXSERIESX_TO_PS4_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXSERIESX, target=SaveFormat.PS4)
+PS4_TO_XBOXSERIESX_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS4, target=SaveFormat.XBOXSERIESX)
+
+# Conversion formats to/from PS3
+PS3_TO_NSW_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS3, target=SaveFormat.NSW)
+NSW_TO_PS3_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.NSW, target=SaveFormat.PS3)
+XBOXONE_TO_PS3_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXONE, target=SaveFormat.PS3)
+PS3_TO_XBOXONE_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS3, target=SaveFormat.XBOXONE)
+XBOXSERIESX_TO_PS3_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXSERIESX, target=SaveFormat.PS3)
+PS3_TO_XBOXSERIESX_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.PS3, target=SaveFormat.XBOXSERIESX)
+
+# Conversion formats to/from NSW (Nintendo Switch)
+XBOXONE_TO_NSW_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXONE, target=SaveFormat.NSW)
+NSW_TO_XBOXONE_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.NSW, target=SaveFormat.XBOXONE)
+XBOXSERIESX_TO_NSW_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXSERIESX, target=SaveFormat.NSW)
+NSW_TO_XBOXSERIESX_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.NSW, target=SaveFormat.XBOXSERIESX)
+
+# Conversion formats to/from XBOXONE
+XBOXSERIESX_TO_XBOXONE_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXSERIESX, target=SaveFormat.XBOXONE)
+XBOXONE_TO_XBOXSERIESX_CONVERT_FORMAT = ConvertFormat(source=SaveFormat.XBOXONE, target=SaveFormat.XBOXSERIESX)
 
 
 class PatchOperationState(Enum):

@@ -37,6 +37,9 @@ stdoutHandler = logging.StreamHandler()
 LOGGER.addHandler(stdoutHandler)
 
 
+SUPPORTED_CONVERT_FORMATS: list[ConvertFormat] = [PS3_TO_PC_CONVERT_FORMAT, PC_TO_PS3_CONVERT_FORMAT]
+
+
 VESPERIA_PS3_SAVE_SIZE = 552 + 838304  # 552 byte save header + 838204 byte save data block
 VESPERIA_PC_SAVE_SIZE = VESPERIA_PS3_SAVE_SIZE + 16  # The PC Save block is 16 bytes larger than PS3
 
@@ -559,10 +562,8 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
             values: Any,
             options_string: str | None = None,
         ):
-            if values == str(PS3_TO_PC_CONVERT_FORMAT):
-                setattr(namespace, self.dest, PS3_TO_PC_CONVERT_FORMAT)
-            elif values == str(PC_TO_PS3_CONVERT_FORMAT):
-                setattr(namespace, self.dest, PC_TO_PS3_CONVERT_FORMAT)
+            if values in [str(format) for format in SUPPORTED_CONVERT_FORMATS]:
+                setattr(namespace, self.dest, ConvertFormat.create_from_string(values))
             else:
                 raise ValueError(f"Value {values} is not an appropriate choice for argument {options_string}")
 
@@ -570,7 +571,7 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
         "--convert-format",
         "-f",
         action=ConvertFormatAction,
-        choices=[str(PS3_TO_PC_CONVERT_FORMAT), str(PC_TO_PS3_CONVERT_FORMAT)],
+        choices=[str(format) for format in SUPPORTED_CONVERT_FORMATS],
         default=PS3_TO_PC_CONVERT_FORMAT,
         help="Specifies the input file save format and what should the output file format should be."
         " Only PS3 and PC supported at this time",
