@@ -12,8 +12,26 @@ from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias, override
 from Crypto.Cipher import AES  # type: ignore[import-not-found]
 
 from save_convert.save_converter_base import (
+    PC_TO_PS4_CONVERT_FORMAT,
     PC_TO_PS5_CONVERT_FORMAT,
+    PC_TO_XBOXONE_CONVERT_FORMAT,
+    PC_TO_XBOXSERIESX_CONVERT_FORMAT,
+    PS4_TO_PC_CONVERT_FORMAT,
+    PS4_TO_PS5_CONVERT_FORMAT,
+    PS4_TO_XBOXONE_CONVERT_FORMAT,
+    PS4_TO_XBOXSERIESX_CONVERT_FORMAT,
     PS5_TO_PC_CONVERT_FORMAT,
+    PS5_TO_PS4_CONVERT_FORMAT,
+    PS5_TO_XBOXONE_CONVERT_FORMAT,
+    PS5_TO_XBOXSERIESX_CONVERT_FORMAT,
+    XBOXONE_TO_PC_CONVERT_FORMAT,
+    XBOXONE_TO_PS4_CONVERT_FORMAT,
+    XBOXONE_TO_PS5_CONVERT_FORMAT,
+    XBOXONE_TO_XBOXSERIESX_CONVERT_FORMAT,
+    XBOXSERIESX_TO_PC_CONVERT_FORMAT,
+    XBOXSERIESX_TO_PS4_CONVERT_FORMAT,
+    XBOXSERIESX_TO_PS5_CONVERT_FORMAT,
+    XBOXSERIESX_TO_XBOXONE_CONVERT_FORMAT,
     ConvertFormat,
     SaveBase,
     SaveConvertBase,
@@ -29,7 +47,6 @@ LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 LOGGER.setLevel(logging.INFO)
 
 # Save Sizes for the PC and PS5 vesions of the game
-# The PS4 save size is much larger (also the data appears to be stored decrypted)
 TALES_OF_ARISE_SAVE_SIZE = 760856
 TALES_OF_ARISE_DLC_SAVE_SIZE = 593080
 
@@ -45,7 +62,8 @@ TALES_OF_ARISE_SAVE_ENCRYPTED_SHA1_OFFSET = TALES_OF_ARISE_SAVE_BLOCK_SIZE_OFFSE
 TALES_OF_ARISE_SAVE_XOR_CIPHER_OFFSET = TALES_OF_ARISE_SAVE_ENCRYPTED_SHA1_OFFSET + 0x14
 # 1 byte sequence - Byte which indicates if the alternatve XOR cipher logic should be performed
 # On PC both the regular logic and alternate logic is the same.
-# On PS5 it is unknown, however the save always has a value 0x01 set on both PC and PS5
+# On other platforms the alternative XOR logic is unknown,
+# however the save on other platforms always has a value 0x01 therefore uses the regular XOR logic
 TALES_OF_ARISE_SAVE_XOR_CIPHER_ALT_LOGIC_OFFSET = TALES_OF_ARISE_SAVE_XOR_CIPHER_OFFSET + 0x1
 # 2 byte padding to align the first encrypted block on a 4-byte boundary
 TALES_OF_ARISE_SAVE_HEADER_PADDING_OFFSET = TALES_OF_ARISE_SAVE_XOR_CIPHER_ALT_LOGIC_OFFSET + 0x1
@@ -54,16 +72,14 @@ TALES_OF_ARISE_SAVE_ENCRYPTED_BLOCK_START = TALES_OF_ARISE_SAVE_HEADER_PADDING_O
 # Offset after the encrypted offset table
 TALES_OF_ARISE_SAVE_ENCRYPTED_OFFSET_BLOCK_END = TALES_OF_ARISE_SAVE_ENCRYPTED_BLOCK_START + 0x40
 
+# Size of the Save Header before the encryption block start
+# Should be 0x20 hex
+TALES_OF_ARISE_SAVE_HEADER_SIZE = TALES_OF_ARISE_SAVE_ENCRYPTED_BLOCK_START - TALES_OF_ARISE_SAVE_BLOCK_START
+
 
 # Offset which contains the (different) offset that pionts to of the save item section header
 TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_REL = 0x28
 TALES_OF_ARISE_PS5_SAVE_ITEM_HEADER_REL = 0x18
-TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_ABS = (
-    TALES_OF_ARISE_SAVE_ENCRYPTED_BLOCK_START + TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_REL
-)
-TALES_OF_ARISE_PS5_SAVE_ITEM_HEADER_ABS = (
-    TALES_OF_ARISE_SAVE_ENCRYPTED_BLOCK_START + TALES_OF_ARISE_PS5_SAVE_ITEM_HEADER_REL
-)
 
 TALES_OF_ARISE_SAVE_ITEM_SECTION_HEADER_SIZE = 0x40
 TALES_OF_ARISE_SAVE_ITEM_SECTION_HEADER_ITEM_COUNT_OFFSET = 0x4
@@ -116,7 +132,42 @@ class XorCipherPerformEnum(IntEnum):
     """
 
     PC = 0
+    PS4 = 1
+    XBOXONE = 2
     PS5 = 3
+    XBOXSERIESX = 4
+
+
+SUPPORTED_SAVE_FORMATS: list[SaveFormat] = [
+    SaveFormat.PC,
+    SaveFormat.PS5,
+    SaveFormat.PS4,
+    SaveFormat.XBOXONE,
+    SaveFormat.XBOXSERIESX,
+]
+
+SUPPORTED_CONVERT_FORMATS: list[ConvertFormat] = [
+    PC_TO_PS5_CONVERT_FORMAT,
+    PC_TO_PS4_CONVERT_FORMAT,
+    PC_TO_XBOXONE_CONVERT_FORMAT,
+    PC_TO_XBOXSERIESX_CONVERT_FORMAT,
+    PS5_TO_PC_CONVERT_FORMAT,
+    PS5_TO_PS4_CONVERT_FORMAT,
+    PS5_TO_XBOXONE_CONVERT_FORMAT,
+    PS5_TO_XBOXSERIESX_CONVERT_FORMAT,
+    PS4_TO_PC_CONVERT_FORMAT,
+    PS4_TO_PS5_CONVERT_FORMAT,
+    PS4_TO_XBOXONE_CONVERT_FORMAT,
+    PS4_TO_XBOXSERIESX_CONVERT_FORMAT,
+    XBOXONE_TO_PC_CONVERT_FORMAT,
+    XBOXONE_TO_PS5_CONVERT_FORMAT,
+    XBOXONE_TO_PS4_CONVERT_FORMAT,
+    XBOXONE_TO_XBOXSERIESX_CONVERT_FORMAT,
+    XBOXSERIESX_TO_PC_CONVERT_FORMAT,
+    XBOXSERIESX_TO_PS5_CONVERT_FORMAT,
+    XBOXSERIESX_TO_PS4_CONVERT_FORMAT,
+    XBOXSERIESX_TO_XBOXONE_CONVERT_FORMAT,
+]
 
 
 class SaveItemSectionEnum(StrEnum):
@@ -215,6 +266,11 @@ class PlatformCryptionData:
     # The byte to use for the platform to determine if the XOR cipher table
     # is used for encryption/decryption on that platform
     xor_cipher_byte: int
+    # Stores the Cipher Key used to encrypt/decrypt the first block at 0x32078
+    first_cipher_key: bytes
+    # Stores the XOR Cipher that is XOR against the bytes the first block pre-encrypted/post-decrypted
+    # bytes of the block at offset 0x32078
+    first_xor_cipher_table: bytes
 
 
 # Start Helper methods
@@ -429,6 +485,62 @@ def update_xor_table(
 # End Helper Methods
 
 
+# Helper Lookup methods to map multiple platforms save functions conversion formats for a specific platform
+
+
+def create_cryption_data_from_save_format(save_format: SaveFormat) -> PlatformCryptionData:
+    match save_format:
+        case SaveFormat.PC:
+            return PlatformCryptionData(
+                save_format=SaveFormat.PC,
+                first_block_dword_offset=TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_REL,
+                xor_table_transform_func=pc_xor_plaintext_savedata,
+                xor_cipher_byte=XorCipherPerformEnum.PC,
+                first_cipher_key=TALES_OF_ARISE_PC_AES_SAVE_KEY,
+                first_xor_cipher_table=TALES_OF_ARISE_PC_XOR_CIPHER_TABLE,
+            )
+        case SaveFormat.XBOXONE:
+            return PlatformCryptionData(
+                save_format=SaveFormat.XBOXONE,
+                first_block_dword_offset=TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_REL,
+                xor_table_transform_func=pc_xor_plaintext_savedata,
+                xor_cipher_byte=XorCipherPerformEnum.XBOXONE,
+                first_cipher_key=TALES_OF_ARISE_PC_AES_SAVE_KEY,
+                first_xor_cipher_table=TALES_OF_ARISE_PC_XOR_CIPHER_TABLE,
+            )
+        case SaveFormat.XBOXSERIESX:
+            return PlatformCryptionData(
+                save_format=SaveFormat.XBOXSERIESX,
+                first_block_dword_offset=TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_REL,
+                xor_table_transform_func=pc_xor_plaintext_savedata,
+                xor_cipher_byte=XorCipherPerformEnum.XBOXSERIESX,
+                first_cipher_key=TALES_OF_ARISE_PC_AES_SAVE_KEY,
+                first_xor_cipher_table=TALES_OF_ARISE_PC_XOR_CIPHER_TABLE,
+            )
+        case SaveFormat.PS5:
+            return PlatformCryptionData(
+                save_format=SaveFormat.PS5,
+                first_block_dword_offset=TALES_OF_ARISE_PS5_SAVE_ITEM_HEADER_REL,
+                xor_table_transform_func=ps5_xor_plaintext_savedata,
+                xor_cipher_byte=XorCipherPerformEnum.PS5,
+                first_cipher_key=TALES_OF_ARISE_PS5_AES_SAVE_KEY,
+                first_xor_cipher_table=TALES_OF_ARISE_PS5_XOR_CIPHER_TABLE,
+            )
+        case SaveFormat.PS4:
+            return PlatformCryptionData(
+                save_format=SaveFormat.PS4,
+                first_block_dword_offset=TALES_OF_ARISE_PS5_SAVE_ITEM_HEADER_REL,
+                xor_table_transform_func=ps5_xor_plaintext_savedata,
+                xor_cipher_byte=XorCipherPerformEnum.PS4,
+                first_cipher_key=TALES_OF_ARISE_PS5_AES_SAVE_KEY,
+                first_xor_cipher_table=TALES_OF_ARISE_PS5_XOR_CIPHER_TABLE,
+            )
+        case _:
+            raise ValueError(
+                f"'{save_format}' is unsupported Cannot create encryption/decryption metadata object for platform"
+            )
+
+
 # Start Manipulation Classes
 class SaveDecryptArise(SaveCryptBase):
     """
@@ -449,11 +561,10 @@ class SaveDecryptArise(SaveCryptBase):
 
     @override
     def _transform(self) -> bool:
-        if self._save_format == SaveFormat.PC or self._save_format == SaveFormat.PS5:
-            if self._save_format == SaveFormat.PC:
-                dec_result = self.decrypt_pc_save_buffer(self._input_data)
-            else:
-                dec_result = self.decrypt_ps5_save_buffer(self._input_data)
+        if self._save_format in SUPPORTED_SAVE_FORMATS:
+            dec_result = self.decrypt_save_buffer(
+                self._input_data, create_cryption_data_from_save_format(self._save_format)
+            )
             if dec_result.return_code == CryptionReturnCodes.SUCCESS:
                 bytes_written = self._output_io.write(dec_result.plaintext_buffer)
                 return bytes_written == len(dec_result.plaintext_buffer)
@@ -513,13 +624,13 @@ class SaveDecryptArise(SaveCryptBase):
     @staticmethod
     def decrypt_save_buffer(
         save_file_content: bytes,
-        cipher_key: bytes | memoryview,
-        plaintext_xor_table: bytes,
         platform_cryption_data: PlatformCryptionData,
     ) -> DecryptionResult:
         """
         Decrypts a Tales of Arise save
         """
+        cipher_key: bytes | memoryview = platform_cryption_data.first_cipher_key
+        plaintext_xor_table: bytes = platform_cryption_data.first_xor_cipher_table
         save_payload = memoryview(save_file_content)[TALES_OF_ARISE_SAVE_BLOCK_START:]
         decrypted_save_buffer: bytearray = bytearray(save_payload)
 
@@ -567,8 +678,8 @@ class SaveDecryptArise(SaveCryptBase):
         # Update the AES key
         cipher_ebc = AES.new(cipher_key[:32], mode=AES.MODE_ECB)
 
-        # For PC, the 10th dword is the offset that is decrypted next.
-        # For PS5, the 6th dowrd is the offset that is decrypted next.
+        # For PC platforms, the 10th dword is the offset that is decrypted next.
+        # For Sony platforms, the 6th dowrd is the offset that is decrypted next.
         next_decrypt_offset = int.from_bytes(
             decrypt_view[
                 platform_cryption_data.first_block_dword_offset : platform_cryption_data.first_block_dword_offset + 4
@@ -749,38 +860,6 @@ class SaveDecryptArise(SaveCryptBase):
         complete_save_content: bytes = save_file_content[:TALES_OF_ARISE_SAVE_BLOCK_START] + decrypted_save_buffer
         return DecryptionResult(CryptionReturnCodes.SUCCESS, complete_save_content)
 
-    @staticmethod
-    def decrypt_pc_save_buffer(save_buffer: bytes) -> DecryptionResult:
-        decryption_result: DecryptionResult = __class__.decrypt_save_buffer(  # type: ignore[name-defined]
-            save_buffer,
-            TALES_OF_ARISE_PC_AES_SAVE_KEY,
-            TALES_OF_ARISE_PC_XOR_CIPHER_TABLE,
-            PlatformCryptionData(
-                save_format=SaveFormat.PC,
-                first_block_dword_offset=TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_REL,
-                xor_table_transform_func=pc_xor_plaintext_savedata,
-                xor_cipher_byte=XorCipherPerformEnum.PC,
-            ),
-        )
-
-        return decryption_result
-
-    @staticmethod
-    def decrypt_ps5_save_buffer(save_buffer: bytes) -> DecryptionResult:
-        decryption_result: DecryptionResult = __class__.decrypt_save_buffer(  # type: ignore[name-defined]
-            save_buffer,
-            TALES_OF_ARISE_PS5_AES_SAVE_KEY,
-            TALES_OF_ARISE_PS5_XOR_CIPHER_TABLE,
-            PlatformCryptionData(
-                save_format=SaveFormat.PS5,
-                first_block_dword_offset=TALES_OF_ARISE_PS5_SAVE_ITEM_HEADER_REL,
-                xor_table_transform_func=ps5_xor_plaintext_savedata,
-                xor_cipher_byte=XorCipherPerformEnum.PS5,
-            ),
-        )
-
-        return decryption_result
-
 
 class SaveEncryptArise(SaveCryptBase):
     """
@@ -801,11 +880,11 @@ class SaveEncryptArise(SaveCryptBase):
 
     @override
     def _transform(self) -> bool:
-        if self._save_format == SaveFormat.PC or self._save_format == SaveFormat.PS5:
-            if self._save_format == SaveFormat.PC:
-                enc_result = self.encrypt_pc_save_buffer(self._input_data)
-            else:
-                enc_result = self.encrypt_ps5_save_buffer(self._input_data)
+
+        if self._save_format in SUPPORTED_SAVE_FORMATS:
+            enc_result = self.encrypt_save_buffer(
+                self._input_data, create_cryption_data_from_save_format(self._save_format)
+            )
             if enc_result.return_code == CryptionReturnCodes.SUCCESS:
                 bytes_written = self._output_io.write(enc_result.encrypted_buffer)
                 return bytes_written == len(enc_result.encrypted_buffer)
@@ -878,13 +957,13 @@ class SaveEncryptArise(SaveCryptBase):
     @staticmethod
     def encrypt_save_buffer(
         save_file_content: bytes,
-        cipher_key: bytes | memoryview,
-        plaintext_xor_table: bytes,
         platform_cryption_data: PlatformCryptionData,
     ) -> EncryptionResult:
         """
         Encrypts a Tales of Arise save
         """
+        cipher_key: bytes | memoryview = platform_cryption_data.first_cipher_key
+        plaintext_xor_table: bytes = platform_cryption_data.first_xor_cipher_table
         save_payload = memoryview(save_file_content)[TALES_OF_ARISE_SAVE_BLOCK_START:]
         encrypted_save_buffer: bytearray = bytearray(save_payload)
 
@@ -933,8 +1012,8 @@ class SaveEncryptArise(SaveCryptBase):
         # Update the AES key
         cipher_ebc = AES.new(cipher_key[:32], mode=AES.MODE_ECB)
 
-        # For PC, the 10th dword is the offset that is decrypted next.
-        # For PS5, the 6th dowrd is the offset that is decrypted next.
+        # For PC platforms, the 10th dword is the offset that is decrypted next.
+        # For Sony platforms, the 6th dowrd is the offset that is decrypted next.
         next_encrypt_offset = int.from_bytes(
             decrypted_view[
                 platform_cryption_data.first_block_dword_offset : platform_cryption_data.first_block_dword_offset + 4
@@ -1121,42 +1200,10 @@ class SaveEncryptArise(SaveCryptBase):
         complete_save_content: bytes = save_file_content[:TALES_OF_ARISE_SAVE_BLOCK_START] + encrypted_save_buffer
         return EncryptionResult(CryptionReturnCodes.SUCCESS, complete_save_content)
 
-    @staticmethod
-    def encrypt_pc_save_buffer(save_buffer: bytes) -> EncryptionResult:
-        encryption_result: EncryptionResult = __class__.encrypt_save_buffer(  # type: ignore[name-defined]
-            save_buffer,
-            TALES_OF_ARISE_PC_AES_SAVE_KEY,
-            TALES_OF_ARISE_PC_XOR_CIPHER_TABLE,
-            PlatformCryptionData(
-                save_format=SaveFormat.PC,
-                first_block_dword_offset=TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_REL,
-                xor_table_transform_func=pc_xor_plaintext_savedata,
-                xor_cipher_byte=XorCipherPerformEnum.PC,
-            ),
-        )
-
-        return encryption_result
-
-    @staticmethod
-    def encrypt_ps5_save_buffer(save_buffer: bytes) -> EncryptionResult:
-        encryption_result: EncryptionResult = __class__.encrypt_save_buffer(  # type: ignore[name-defined]
-            save_buffer,
-            TALES_OF_ARISE_PS5_AES_SAVE_KEY,
-            TALES_OF_ARISE_PS5_XOR_CIPHER_TABLE,
-            PlatformCryptionData(
-                save_format=SaveFormat.PS5,
-                first_block_dword_offset=TALES_OF_ARISE_PS5_SAVE_ITEM_HEADER_REL,
-                xor_table_transform_func=ps5_xor_plaintext_savedata,
-                xor_cipher_byte=XorCipherPerformEnum.PS5,
-            ),
-        )
-
-        return encryption_result
-
 
 class SaveConvertAriseDecrypted(SaveConvertBase):
     """
-    Converts between a PS5<->PC decrypted save
+    Converts between a Source Format<->Target Format decrypted save
 
     What the conversion does is the following:
     1. Set the XOR Cipher byte to useindicate that the XOR cipher should be used
@@ -1209,17 +1256,18 @@ class SaveConvertAriseDecrypted(SaveConvertBase):
     def convert_decrypyted_save_header(
         source_buffer: bytes | bytearray | memoryview, convert_format: ConvertFormat
     ) -> bytes:
-        """Swaps the 6th and 10th word of the offset block to convert between PC an PS5"""
+        """Swaps the 6th and 10th word of the offset block to convert between between platforms"""
         offset_block_end = TALES_OF_ARISE_SAVE_ENCRYPTED_OFFSET_BLOCK_END
         save_header_block = memoryview(source_buffer)[TALES_OF_ARISE_SAVE_BLOCK_START:offset_block_end]
         new_header_block: bytearray = bytearray(save_header_block)
+        offset_block = memoryview(save_header_block)[TALES_OF_ARISE_SAVE_HEADER_SIZE:]
+        new_offset_block = memoryview(new_header_block)[TALES_OF_ARISE_SAVE_HEADER_SIZE:]
 
         # Modify the Save Header block
         use_xor_cipher_offset = TALES_OF_ARISE_SAVE_XOR_CIPHER_OFFSET
-        if convert_format.target == SaveFormat.PC:
-            new_header_block[abs_to_rel_offset(use_xor_cipher_offset)] = XorCipherPerformEnum.PC
-        elif convert_format.target == SaveFormat.PS5:
-            new_header_block[abs_to_rel_offset(use_xor_cipher_offset)] = XorCipherPerformEnum.PS5
+        if convert_format.target in SUPPORTED_SAVE_FORMATS:
+            cryption_data = create_cryption_data_from_save_format(convert_format.target)
+            new_header_block[abs_to_rel_offset(use_xor_cipher_offset)] = cryption_data.xor_cipher_byte
         else:
             LOGGER.error(
                 "Target Save Format not supported."
@@ -1227,17 +1275,22 @@ class SaveConvertAriseDecrypted(SaveConvertBase):
             )
 
         # Modify the offset table entry that points to the Save Item Section
-        if convert_format == PS5_TO_PC_CONVERT_FORMAT or convert_format == PC_TO_PS5_CONVERT_FORMAT:
-            # Swap the 6th(0x1C) and 10th(0x28) dwords in the offset block
-            pc_save_offset = abs_to_rel_offset(TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_ABS)
+        if convert_format in SUPPORTED_CONVERT_FORMATS:
+            # Swap the 6th(0x1C) and 10th(0x28) dwords in the offset block depending on the platform
+            source_cryption_data = create_cryption_data_from_save_format(convert_format.source)
+            target_cryption_data = create_cryption_data_from_save_format(convert_format.target)
+            source_save_offset = source_cryption_data.first_block_dword_offset
+            target_save_offset = target_cryption_data.first_block_dword_offset
 
-            ps5_save_offset = abs_to_rel_offset(TALES_OF_ARISE_PS5_SAVE_ITEM_HEADER_ABS)
-            new_header_block[pc_save_offset : pc_save_offset + 4] = save_header_block[
-                ps5_save_offset : ps5_save_offset + 4
-            ]
-            new_header_block[ps5_save_offset : ps5_save_offset + 4] = save_header_block[
-                pc_save_offset : pc_save_offset + 4
-            ]
+            # If the source save offset and target sae offset are the same, then there is nothing
+            # to swap. So return the header block unchanged.
+            if source_save_offset != target_save_offset:
+                new_offset_block[source_save_offset : source_save_offset + 4] = offset_block[
+                    target_save_offset : target_save_offset + 4
+                ]
+                new_offset_block[target_save_offset : target_save_offset + 4] = offset_block[
+                    source_save_offset : source_save_offset + 4
+                ]
         elif convert_format.source != convert_format.target:
             LOGGER.error(f"Unsupported decryption conversion {convert_format}")
             return b""
@@ -1268,25 +1321,23 @@ class SaveConvertAriseEncrypted(SaveConvertBase):
 
     @override
     def _transform(self) -> bool:
-        if self._convert_format.source != SaveFormat.PC and self._convert_format.source != SaveFormat.PS5:
+        if self._convert_format.source not in SUPPORTED_SAVE_FORMATS:
             LOGGER.error(f"Unsupported source save format supplied {self._convert_format.source}. Cannot decrypt...")
             return False
 
-        if self._convert_format.target != SaveFormat.PC and self._convert_format.target != SaveFormat.PS5:
+        if self._convert_format.target not in SUPPORTED_SAVE_FORMATS:
             LOGGER.error(f"Unsupported target save format supplied {self._convert_format.target}. Cannot encrypt...")
             return False
 
         # Decrypt save using source cipher key and XOR table
-        if self._convert_format.source == SaveFormat.PC:
-            dec_result = SaveDecryptArise.decrypt_pc_save_buffer(self._input_data)
-        else:
-            dec_result = SaveDecryptArise.decrypt_ps5_save_buffer(self._input_data)
-
+        dec_result = SaveDecryptArise.decrypt_save_buffer(
+            self._input_data, create_cryption_data_from_save_format(self._convert_format.source)
+        )
         if dec_result.return_code != CryptionReturnCodes.SUCCESS:
             LOGGER.error(f"Decryption Failed with rc {dec_result.return_code}")
             return False
 
-        # Convert Decrypted Save between PC<->PS5 format
+        # Convert Decrypted Save between source and target formats
         converted_offset_bytes = SaveConvertAriseDecrypted.convert_decrypyted_save_header(
             dec_result.plaintext_buffer, self._convert_format
         )
@@ -1307,10 +1358,9 @@ class SaveConvertAriseEncrypted(SaveConvertBase):
         )
 
         # Encrypt save using the target cipher key and XOR table
-        if self._convert_format.target == SaveFormat.PC:
-            enc_result = SaveEncryptArise.encrypt_pc_save_buffer(converted_plaintext_buffer)
-        else:
-            enc_result = SaveEncryptArise.encrypt_ps5_save_buffer(converted_plaintext_buffer)
+        enc_result = SaveEncryptArise.encrypt_save_buffer(
+            converted_plaintext_buffer, create_cryption_data_from_save_format(self._convert_format.target)
+        )
         if enc_result.return_code == CryptionReturnCodes.SUCCESS:
             bytes_written = self._output_io.write(enc_result.encrypted_buffer)
             return bytes_written == len(enc_result.encrypted_buffer)
@@ -1358,7 +1408,7 @@ class SaveDumpItemOffsetsArise(SaveBase):
 
     @override
     def _transform(self) -> bool:
-        if self._save_format == SaveFormat.PC or self._save_format == SaveFormat.PS5:
+        if self._save_format in SUPPORTED_SAVE_FORMATS:
             dump_result = self.dump_save_section_offsets(self._input_data, self._save_format)
             if dump_result.return_code != CryptionReturnCodes.SUCCESS:
                 LOGGER.error(f"Data dump Failed with rc {dump_result.return_code}")
@@ -1399,16 +1449,13 @@ class SaveDumpItemOffsetsArise(SaveBase):
             )
         ]
 
-        # For PC, the 10th dword is the offset that to the save item section header.
-        # For PS5, the 6th dowrd is the offset that to the save item section header.
-        if save_format == SaveFormat.PC:
+        # For Microsoft platforms, the 10th dword is the offset that to the save item section header.
+        # For Sony platforms, the 6th dowrd is the offset that to the save item section header.
+        if save_format in SUPPORTED_SAVE_FORMATS:
+            platform_cryption_data = create_cryption_data_from_save_format(save_format)
+            first_block_dword_offset = platform_cryption_data.first_block_dword_offset
             save_item_section_header_offset: int = int.from_bytes(
-                offset_block[TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_REL : TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_REL + 4],
-                "little",
-            )
-        elif save_format == SaveFormat.PS5:
-            save_item_section_header_offset = int.from_bytes(
-                offset_block[TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_REL : TALES_OF_ARISE_PC_SAVE_ITEM_HEADER_REL + 4],
+                offset_block[first_block_dword_offset : first_block_dword_offset + 4],
                 "little",
             )
         else:
@@ -1478,10 +1525,8 @@ class ConvertFormatAction(argparse.Action):
         values: Any,
         options_string: str | None = None,
     ):
-        if values == str(PS5_TO_PC_CONVERT_FORMAT):
-            setattr(namespace, self.dest, PS5_TO_PC_CONVERT_FORMAT)
-        elif values == str(PC_TO_PS5_CONVERT_FORMAT):
-            setattr(namespace, self.dest, PC_TO_PS5_CONVERT_FORMAT)
+        if values in [str(format) for format in SUPPORTED_CONVERT_FORMATS]:
+            setattr(namespace, self.dest, ConvertFormat.create_from_string(values))
         else:
             raise ValueError(f"Value {values} is not an appropriate choice for argument {options_string}")
 
@@ -1511,8 +1556,7 @@ def add_convert_arguments(parser: argparse.ArgumentParser) -> None:
         "-f",
         required=True,
         action=ConvertFormatAction,
-        choices=[str(PS5_TO_PC_CONVERT_FORMAT), str(PC_TO_PS5_CONVERT_FORMAT)],
-        default=PS5_TO_PC_CONVERT_FORMAT,
+        choices=[str(format) for format in SUPPORTED_CONVERT_FORMATS],
         help="Specifies the input file save format and desired the output file format.",
     )
 
@@ -1524,7 +1568,7 @@ def add_crypt_arguments(parser: argparse.ArgumentParser) -> None:
         "--save-format",
         "-s",
         required=True,
-        choices=[SaveFormat.PC, SaveFormat.PS5],
+        choices=SUPPORTED_SAVE_FORMATS,
         default=SaveFormat.PC,
         help="Specifies the file save format.",
     )
@@ -1542,14 +1586,17 @@ def add_item_dumper_arguments(parser: argparse.ArgumentParser) -> None:
         "--save-format",
         "-s",
         required=True,
-        choices=[SaveFormat.PC, SaveFormat.PS5],
+        choices=SUPPORTED_SAVE_FORMATS,
         default=SaveFormat.PC,
         help="Specifies the decrypted file save format.",
     )
 
 
 def add_commands(parser: argparse.ArgumentParser) -> None:
-    parser.description = "Save Converter and Encrypter/Decrypter (PS5<->PC) for Tales of Arise"
+    parser.description = (
+        "Save Converter and Encrypter/Decrypter for Tales of Arise\n"
+        + "Supports PC, PS5, PS4 with experimental support for XBOX saves if they can be decrypted"
+    )
     # Default to showing help if a sub command is not supplied
     parser.set_defaults(func=lambda _: parser.print_help(sys.stderr))
 
@@ -1644,7 +1691,8 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Tool to convert, decrypt, encrypt or dump save offsets for Tales of Arise between PS5 <-> PC",
+        description="Tool to convert, decrypt, encrypt or dump save offsets for Tales of Arise between"
+        " PS4, PS5, PC, XBox One, XBox Series X",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 

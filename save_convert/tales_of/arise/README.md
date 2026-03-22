@@ -1,6 +1,6 @@
 # Tales of Arise Save Converter and Decrypter
 Save Converter for Tales of Arise that can decrypt/encrypt saves as well.  
-It supports PS5 and PC saves.  
+It supports PS4, PS5, PC saves with untesteed support for Xbox One and Xbox Series X/S saves.  
 Furthermore the decrypted save item section blocks offsets can be dumped using this tool, which can be used for save editing.  
 
 ## Usage
@@ -18,6 +18,11 @@ python ./save_convert/tales_of/arise/tales_of_arise_save_converter.py  --help
 #### Convert Encrypted PS5 -> PC Arise Save
 ```bash
 python save_converter.py tales-of-arise convert-save --convert-format=ps5-to-pc -i <path-to-encrypted-ps5-save> -o <path-to-store-encrypted-pc-save>
+```
+
+#### Convert Encrypted PS4 -> PC Arise Save
+```bash
+python save_converter.py tales-of-arise convert-save --convert-format=ps4-to-pc -i <path-to-encrypted-ps4-save> -o <path-to-store-encrypted-pc-save>
 ```
 
 #### Convert Encrypted PC -> PS5 Arise Save
@@ -68,7 +73,7 @@ python save_converter.py tales-of-arise dump-save-offsets --save-format=pc -i <p
 ---
 ### Save Notes
 The save item sections in the save file are offsets based. Therefore the location of the save item sections aren't fixed.  
-For PC saves, the decrypted dword at 0x32090 points to the save item header section, which points to first save item section block.  
+The decrypted dword at (PC offset=0x320A0, PS4/PS5 offset=0x32090) points to the save item header section, which points to first save item section block.  
 Each save item block has contains an offset value at the block start address + 0xC that points to the next save item section.
 The order of the blocks are as follows:
 * Entitlement
@@ -102,7 +107,7 @@ The order of the blocks are as follows:
 * EncountSymbolSaveData
 * RecoveryPointSaveData
 
-The `dump-save-offsets` command can be used to output to dump all save item sections offset locations within the decrypted file as well as the section size
+The `dump-save-offsets` command can be used to output to dump all save item sections offset locations within the decrypted file as well as the section size.  
 
 ## Integration into other tools/libraries.
 The following list the methods that can be integrated to other tools to retrieve information about the save.
@@ -110,11 +115,9 @@ One use case for this is creating a save editor for the game
 | Method | Description |
 | --- | --- |
 | `SaveDumpItemOffsetsArise.dump_save_section_offsets` | Static method: Invok to retrieve the list of save item offsets. Useful for implementing a save editor |
-| `SaveDecryptArise.decrypt_pc_save_buffer` | Static method: Invoke to decrypt an encrypted PC save|
-| `SaveDecryptArise.decrypt_ps5_save_buffer` | Static method: Invoke to decrypt an encrypted PS5 save |
-| `SaveConvertAriseDecrypted.convert_decrypyted_save_header` | Static method: Invoke to convert a decrypted save between a PS5<-> PC formats|
-| `SaveEncryptArise.encrypt_pc_save_buffer` | Static method: Invoke to encrypt a decrypted PC save |
-| `SaveEncryptArise.encrypt_ps5_save_buffer` | Static method: Invoke to encrypt a decrypted PS5 save |
+| `SaveDecryptArise.decrypt_save_buffer` | Static method: Invoke to decrypt an encrypted save|
+| `SaveConvertAriseDecrypted.convert_decrypyted_save_header` | Static method: Invoke to convert a decrypted save between a source and target formats|
+| `SaveEncryptArise.encrypt_save_buffer` | Static method: Invoke to encrypt a decrypted save |
 
 All the methods above can be accessed by importing using the form:
  `from save_convert.tales_of.arise.tales_of_arise_save_converter import ...`

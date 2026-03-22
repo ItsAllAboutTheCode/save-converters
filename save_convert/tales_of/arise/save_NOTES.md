@@ -11,9 +11,11 @@ Contains notes found during the process to learn how to decrypt Tales of Arise s
   * The second byte is used to determine the alternate XOR logic to use, however that byte is always 0x1 on PC/PS5.  
   Also the alternate XOR logic is the same as the original logic.  
   For PS5 the bytes are set set to 03 01  
+  For PS4 the bytes are set set to 01 01  
   For PC the bytes are set to 00 01
   * If the first byte is 0x00 on PC, then the XOR logic is performed
   * If the first byte is 0x03 on PS5, then the XOR logic is performed
+  * If the first byte is 0x01 on PS4, then the XOR logic is performed
 * 0x3206A - 2 byte padding to get to 4-byte alignment
 * 0x32078 - Start of encrypted save data
 
@@ -28,12 +30,12 @@ Right now, known values are:
 | Byte Value | Platform |
 | --- | --- |
 | 0x0 | PC |
-| 0x1 | Unknown |
-| 0x2 | Unknown |
-| 0x3 | PS5 
+| 0x1 | PS4 |
+| 0x2 | Xbox One? |
+| 0x3 | PS5 |
+| 0x4 | Xbox Series S/X |
 
-I am assuming other platforms occupy bytes 01 and 02.  
-Maybe the other values are variants of PS4, Xbox One, Xbox Series X.
+Maybe the other values are variants of 0x2 is for Xbox One and 0x04 is Xbox Series S/X
 It is important that the value is correct for the save the platform is expected to load for.  
 Otherwise the XOR cipher against the AES decrypted data would fail and the save load logic would raise an exception.  
 
@@ -58,7 +60,7 @@ All the offsets are based on that build of the executable
 PC Save Decryption starts at instruction 0x1408DA449  
 PC Save Encryption starts at instruction 0x1408D9E22  
 
-Executable offset on PC 0x1408DA11C points references the bytes that are written for the X0R cipher.  
+Executable offset on PC 0x1408DA11C points references the bytes that are written for the XOR cipher.  
 The value is a constant 0x100 hex which writes bytes 00 01 to the save, which indicates that save data underwent an XOR cipher before AES encryption.
 
 The encryption section is marked by the read of the Cipher Key at .text section 0x14332D340
@@ -73,6 +75,7 @@ of bytes came up as potential PS5 keys:
 `CXYAXC4YcGMRuRRjBh_D7Ts8MPkZ4G9`  
 
 The actual save keys and XOR tables are listed in the next section.  
+It turns out the PS4 and PS5 save keys and XOR cipher are the same
 
 ## Save Keys and XOR Cipher Tables
 ### PC AES Save Key
@@ -101,7 +104,7 @@ bytes.fromhex(
 )
 ```
 
-### PS5 AES Save Key
+### PS4/PS5 AES Save Key
 ```python
 # b'9QLJPHXZUnG2LJAHXC6wcfHYkBVzSHyB-53t9cPfnriPcJ-kKcrRaCb6BriUScd\x00'
 bytes.fromhex(
@@ -112,7 +115,7 @@ bytes.fromhex(
 )
 ```
 
-### PS5 XOR Cipher Table
+### PS4/PS5 XOR Cipher Table
 ```python
 # b'JEExTp59i6QP_pg2GK7ZjcW32bJ-XmRWCXYAXC4YcGMRuRRjBh_D7Ts8MPkZ4G9\x00'
 bytes.fromhex(
@@ -129,10 +132,10 @@ The following code is what was used to find the XOR Cipher table
 After testing out the potential cipher keys
 
 ```python
-# NOTE: The PS5 encryption key and XOR table was found this function
+# NOTE: The PS4/PS5 encryption key and XOR table was found this function
 def find_ps5_xor_table_candidates(candidate_ps5_cipher_keys: list[bytes] = [ps5_cipher_key]):
     # Read the decrypted boot file into memory
-    eboot_path = Path("/mnt/DataDrive/Hacking/Sony/PS5/Debugging/eboot.bin")
+    eboot_path = Path("<path-to-decrypted-eboot.bin>")
     eboot_buffer = b""
     with eboot_path.open("rb") as eboot_file:
         eboot_buffer = eboot_file.read()
@@ -173,7 +176,7 @@ After decryption of the first 64-bite save block at offset 0x32078, that block a
 16 4-byte little endian offsets into the save data block.  
 ### For PC Saves
 The 10th 4-byte entry (10 * 4 = 40 = 0x28) that is at offset (0x32078 + 0x28) = 0x320A0 is the offset (zero-based).  
-### For PS5 Saves
+### For PS4/PS5 Saves
 The 6th 4-byte entry (6 * 4 = 24 = 0x18) that is at offset (0x32078 + 0x18) = 0x32000 is the offset (zero-based).  
 
 That points to the table that contains the number of Save Item sections (30 or 0x1E) and the address to the save item section to load.  
@@ -217,6 +220,9 @@ All the offsets are the save data block at 0x32058
 * RecoveryPointSaveData
 
 
-### Convert between Decrypted PS5 and PC save
-To convert a decrypted PS5 to decrypted PC save and vice versa, all that needs to be done is to swap the DWORD(4-bytes) at offset 0x32090 with 0x320A0.  
-Once those bytes have been swapped, they can be encrypted using the AES save key for that platform.
+### Convert between Decrypted PS4, PS5 and PC save
+To convert between a decrypted PS4, PS5 and PC save what needs to be done is the following steps:  
+1. Set the XOR Cipher Byte at offset 0x32074 to the appropriate value for the platform (PC=0x0, PS4=0x1, PS5=0x3)  
+  1. If converting between PS4/PS5 and PC swap the DWORD(4-bytes) at offset 0x32090 with 0x320A0.  
+  1. If converting between PS4 and PS5, no DWORD swapping is required.  
+1. Once those bytes have been swapped, they can be encrypted using the AES save key for that platform.  
