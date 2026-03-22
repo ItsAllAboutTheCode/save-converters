@@ -42,6 +42,12 @@ from save_convert.save_converter_base import (
 if TYPE_CHECKING:
     from save_convert.save_converter_base import ConvertPatchTable
 
+
+SCRIPT_DIR: Path = Path(__file__).parent.resolve()
+DEFAULT_PS5_PATCH_FILE: Path = SCRIPT_DIR / "patch/SAVE.ps5"
+
+SUPPORTED_PATCH_FILE_PLATFORMS: list[SaveFormat] = [SaveFormat.PS4, SaveFormat.PS5]
+
 LOGGER = logging.getLogger("arise_save_converter")
 LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 LOGGER.setLevel(logging.INFO)
@@ -866,8 +872,12 @@ class SaveEncryptArise(SaveCryptBase):
     Encrypts a decrypted Tales of Arive save using the specified save format
     """
 
+    _patch_metadata_file: Path | None = None
+
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
+        if getattr(args, "patch_metadata", self._save_format in SUPPORTED_PATCH_FILE_PLATFORMS):
+            self._patch_metadata_file = args.patch_metadata_file
 
         # Override default output path from base SaveCryptBase
         output_path: Path | None = getattr(args, "output", None)
@@ -886,10 +896,20 @@ class SaveEncryptArise(SaveCryptBase):
                 self._input_data, create_cryption_data_from_save_format(self._save_format)
             )
             if enc_result.return_code == CryptionReturnCodes.SUCCESS:
-                bytes_written = self._output_io.write(enc_result.encrypted_buffer)
-                return bytes_written == len(enc_result.encrypted_buffer)
-            LOGGER.error(f"Encryption Failed with rc {enc_result.return_code}")
-            return False
+                output_buffer = enc_result.encrypted_buffer
+                # Patch metadata logic
+                if self._patch_metadata_file and self._patch_metadata_file.exists():
+                    with self._patch_metadata_file.open("rb") as f:
+                        # Write out the patch file bytes if it exist and the platform is supported
+                        output_buffer = (
+                            f.read(TALES_OF_ARISE_SAVE_BLOCK_START)
+                            + enc_result.encrypted_buffer[TALES_OF_ARISE_SAVE_BLOCK_START:]
+                        )
+                bytes_written = self._output_io.write(output_buffer)
+                return bytes_written == len(output_buffer)
+            else:
+                LOGGER.error(f"Encryption Failed with rc {enc_result.return_code}")
+                return False
         else:
             LOGGER.error(f"Unsupported encrypt save format supplied {self._save_format}. Cannot encrypt...")
             return False
@@ -1307,8 +1327,14 @@ class SaveConvertAriseEncrypted(SaveConvertBase):
     3. Encrypts the converted save data to the @target key of the ConvertFormat
     """
 
+    # Path to file to patch first 0x32058 of the save with
+    # Used for the menu thumbnail and whether the PS5 would allow the save the load
+    _patch_metadata_file: Path | None = None
+
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
+        if getattr(args, "patch_metadata", self._convert_format.target in SUPPORTED_PATCH_FILE_PLATFORMS):
+            self._patch_metadata_file = args.patch_metadata_file
 
         # Override default output path from base SaveConvertBase
         output_path: Path | None = getattr(args, "output", None)
@@ -1362,8 +1388,17 @@ class SaveConvertAriseEncrypted(SaveConvertBase):
             converted_plaintext_buffer, create_cryption_data_from_save_format(self._convert_format.target)
         )
         if enc_result.return_code == CryptionReturnCodes.SUCCESS:
-            bytes_written = self._output_io.write(enc_result.encrypted_buffer)
-            return bytes_written == len(enc_result.encrypted_buffer)
+            output_buffer = enc_result.encrypted_buffer
+            # Patch metadata logic
+            if self._patch_metadata_file and self._patch_metadata_file.exists():
+                with self._patch_metadata_file.open("rb") as f:
+                    # Write out the patch file bytes if it exist and the platform is supported
+                    output_buffer = (
+                        f.read(TALES_OF_ARISE_SAVE_BLOCK_START)
+                        + enc_result.encrypted_buffer[TALES_OF_ARISE_SAVE_BLOCK_START:]
+                    )
+            bytes_written = self._output_io.write(output_buffer)
+            return bytes_written == len(output_buffer)
         LOGGER.error(f"Encryption Failed with rc {enc_result.return_code}")
         return False
 
@@ -1559,6 +1594,23 @@ def add_convert_arguments(parser: argparse.ArgumentParser) -> None:
         choices=[str(format) for format in SUPPORTED_CONVERT_FORMATS],
         help="Specifies the input file save format and desired the output file format.",
     )
+    _ = parser.add_argument(
+        "--patch-metadata",
+        "-p",
+        action=argparse.BooleanOptionalAction,
+        default=argparse.SUPPRESS,
+        help="Patches the save metadata which contains the thumbnail and state data shown in the save menu.\n"
+        "This is needed when converting a native PC save -> PS4/PS5 to allow the Save Menu to load the save.\n"
+        f"This replaces the first 0x{TALES_OF_ARISE_SAVE_BLOCK_START:X} bytes within the save file with values"
+        " from a new game save for PS4/PS5\n"
+        "(PS4/PS5) Default=True, (Other) Default=False",
+    )
+    _ = parser.add_argument(
+        "--patch-metadata-file",
+        "-m",
+        default=DEFAULT_PS5_PATCH_FILE,
+        help="Override for the file used for patching metadata.",
+    )
 
 
 def add_crypt_arguments(parser: argparse.ArgumentParser) -> None:
@@ -1571,6 +1623,23 @@ def add_crypt_arguments(parser: argparse.ArgumentParser) -> None:
         choices=SUPPORTED_SAVE_FORMATS,
         default=SaveFormat.PC,
         help="Specifies the file save format.",
+    )
+    _ = parser.add_argument(
+        "--patch-metadata",
+        "-p",
+        action=argparse.BooleanOptionalAction,
+        default=argparse.SUPPRESS,
+        help="Patches the save metadata which contains the thumbnail and state data shown in the save menu.\n"
+        "This is needed when converting a native PC save -> PS4/PS5 to allow the Save Menu to load the save.\n"
+        f"This replaces the first 0x{TALES_OF_ARISE_SAVE_BLOCK_START:X} bytes within the save file with values"
+        " from a new game save for PS4/PS5\n"
+        "(PS4/PS5) Default=True, (Other) Default=False",
+    )
+    _ = parser.add_argument(
+        "--patch-metadata-file",
+        "-m",
+        default=DEFAULT_PS5_PATCH_FILE,
+        help="Override for the file used for patching metadata.",
     )
 
 
