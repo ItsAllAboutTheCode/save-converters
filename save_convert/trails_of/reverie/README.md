@@ -32,7 +32,7 @@ python save_converter.py trails-into-reverie --convert-format=pc-to-ps4 -i <path
 The input file can be decompressed without conversion to different format.  
 Supported compression types are: `Falcom Type1` and `Zstandard` (ZSTD)
 ```bash
-python save_converter.py trails-into-reverie -i <path-to-compressed-save> -o <path-to-decompressed-save>
+python save_converter.py trails-into-reverie --decompress-only -i <path-to-compressed-save> -o <path-to-decompressed-save>
 ```
 
 ## Credits
