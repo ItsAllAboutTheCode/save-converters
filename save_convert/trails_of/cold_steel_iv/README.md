@@ -24,7 +24,7 @@ python save_converter.py trails-of-cold-steel-iv --convert-format=pc-to-ps4 -i <
 The input file can be decompressed without conversion to different format.  
 Supported compression types are: `Falcom Type1` and `Zstandard` (ZSTD)
 ```bash
-python save_converter.py trails-of-cold-steel-iv -i <path-to-compressed-save> -o <path-to-decompressed-save>
+python save_converter.py trails-of-cold-steel-iv --decompress-only -i <path-to-compressed-save> -o <path-to-decompressed-save>
 ```
 
 ## Credits
