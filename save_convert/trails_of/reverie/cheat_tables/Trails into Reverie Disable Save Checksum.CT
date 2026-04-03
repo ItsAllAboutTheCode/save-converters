@@ -71,11 +71,143 @@ hnk.exe+59D297: 48 81 C1 48 90 5F 00        - add rcx,005F9048
 }
 </AssemblerScript>
     </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Disable Save DLC Consumed Check"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : hnk.exe
+
+  This script jumps over the instructions
+  that fails save loading due to containing consumed dlc that is not available
+}
+
+[ENABLE]
+
+aobscanmodule(disable_dlc_consumed_check_aob,hnk.exe,0F 83 86 00 00 00 BA) // should be unique
+alloc(newmem,$1000,disable_dlc_consumed_check_aob)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  jmp hnk.exe+20871D
+
+disable_dlc_consumed_check_aob:
+  jmp newmem
+  nop
+return:
+registersymbol(disable_dlc_consumed_check_aob)
+
+[DISABLE]
+
+disable_dlc_consumed_check_aob:
+  db 0F 83 86 00 00 00
+
+unregistersymbol(disable_dlc_consumed_check_aob)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: hnk.exe+208691
+
+hnk.exe+20865D: 41 F6 83 F5 2C 00 00 20        - test byte ptr [r11+00002CF5],20
+hnk.exe+208665: 0F 85 EE 02 00 00              - jne hnk.exe+208959
+hnk.exe+20866B: 41 F6 83 EB 9C 67 00 04        - test byte ptr [r11+00679CEB],04
+hnk.exe+208673: 0F 85 E0 02 00 00              - jne hnk.exe+208959
+hnk.exe+208679: 41 8B C8                       - mov ecx,r8d
+hnk.exe+20867C: 83 E1 1F                       - and ecx,1F
+hnk.exe+20867F: 49 8B C0                       - mov rax,r8
+hnk.exe+208682: 48 BA A0 02 B4 00 00 00 00 00  - mov rdx,0000000000B402A0
+hnk.exe+20868C: FF E2                          - jmp rdx
+hnk.exe+20868E: 0F A3 C8                       - bt eax,ecx
+// ---------- INJECTING HERE ----------
+hnk.exe+208691: 0F 83 86 00 00 00              - jae hnk.exe+20871D
+// ---------- DONE INJECTING  ----------
+hnk.exe+208697: BA BC 88 00 00                 - mov edx,000088BC
+hnk.exe+20869C: 48 89 74 24 50                 - mov [rsp+50],rsi
+hnk.exe+2086A1: 48 89 74 24 48                 - mov [rsp+48],rsi
+hnk.exe+2086A6: 0F 57 DB                       - xorps xmm3,xmm3
+hnk.exe+2086A9: F3 0F 11 5C 24 40              - movss [rsp+40],xmm3
+hnk.exe+2086AF: 48 89 74 24 38                 - mov [rsp+38],rsi
+hnk.exe+2086B4: 40 88 74 24 30                 - mov [rsp+30],sil
+hnk.exe+2086B9: F3 0F 11 5C 24 28              - movss [rsp+28],xmm3
+hnk.exe+2086BF: F3 0F 11 5C 24 20              - movss [rsp+20],xmm3
+hnk.exe+2086C5: F3 0F 10 15 FF EC A6 00        - movss xmm2,[hnk.exe+C773CC]
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"Disable Save DLC Character Check"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : hnk.exe
+
+  This script jumps over the instructions for checking DLC on characters
+}
+[ENABLE]
+
+aobscanmodule(disable_dlc_char_check_aob,hnk.exe,74 5C BA BC 88 00 00) // should be unique
+alloc(newmem,$1000,disable_dlc_char_check_aob)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  jmp hnk.exe+2087BE
+
+disable_dlc_char_check_aob:
+  jmp newmem
+  nop 2
+return:
+registersymbol(disable_dlc_char_check_aob)
+
+[DISABLE]
+
+disable_dlc_char_check-aob:
+  db 74 5C BA BC 88 00 00
+
+unregistersymbol(disable_dlc_char_check_aob)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: hnk.exe+208760
+
+hnk.exe+20872B: 0F 57 DB                       - xorps xmm3,xmm3
+hnk.exe+20872E: F3 0F 10 15 96 EC A6 00        - movss xmm2,[hnk.exe+C773CC]
+hnk.exe+208736: 48 8B 0D 23 E9 C7 00           - mov rcx,[hnk.exe+E87060]
+hnk.exe+20873D: 48 89 74 24 48                 - mov [rsp+48],rsi
+hnk.exe+208742: F3 0F 11 5C 24 40              - movss [rsp+40],xmm3
+hnk.exe+208748: 48 89 74 24 38                 - mov [rsp+38],rsi
+hnk.exe+20874D: 40 88 74 24 30                 - mov [rsp+30],sil
+hnk.exe+208752: 48 BA 00 03 B4 00 00 00 00 00  - mov rdx,0000000000B40300
+hnk.exe+20875C: FF E2                          - jmp rdx
+hnk.exe+20875E: 84 C0                          - test al,al
+// ---------- INJECTING HERE ----------
+hnk.exe+208760: 74 5C                          - je hnk.exe+2087BE
+// ---------- DONE INJECTING  ----------
+hnk.exe+208762: BA BC 88 00 00                 - mov edx,000088BC
+hnk.exe+208767: E8 24 B8 13 00                 - call hnk.exe+343F90
+hnk.exe+20876C: 48 8B 05 ED E8 C7 00           - mov rax,[hnk.exe+E87060]
+hnk.exe+208773: 4C 8B 80 68 81 5F 00           - mov r8,[rax+005F8168]
+hnk.exe+20877A: 8B C6                          - mov eax,esi
+hnk.exe+20877C: 41 8B 50 38                    - mov edx,[r8+38]
+hnk.exe+208780: 81 E2 FF FF FF 7F              - and edx,7FFFFFFF
+hnk.exe+208786: 0F 86 F5 00 00 00              - jbe hnk.exe+208881
+hnk.exe+20878C: 4D 8B 40 40                    - mov r8,[r8+40]
+hnk.exe+208790: 41 B9 A8 00 00 00              - mov r9d,000000A8
+}
+</AssemblerScript>
+    </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
   <LuaScript>PROCESS_NAME = 'hnk.exe'
 AUTO_ACTIVE_SCRIPTS = {}
 table.insert(AUTO_ACTIVE_SCRIPTS, 'Disable Save Checksum')
+table.insert(AUTO_ACTIVE_SCRIPTS, 'Disable Save DLC Consumed Check')
+table.insert(AUTO_ACTIVE_SCRIPTS, 'Disable Save DLC Character Check')
 
 --------
 -------- Auto Attach

@@ -40,6 +40,9 @@ Save converters or decrypters are supported for the following games:
 | The Legend of Heroes - Trails of Cold Steel III | [trails-of-cold-steel-iii-converter](./save_convert/trails_of/cold_steel_iii/README.md) | [trails-of-cold-steel-iii-cheat-tables](./save_convert/trails_of/cold_steel_iii/cheat_tables) |
 | The Legend of Heroes - Trails of Cold Steel IV | [trails-of-cold-steel-iv-converter](./save_convert/trails_of/cold_steel_iv/README.md) | [trails-of-cold-steel-iv-cheat-tables](./save_convert/trails_of/cold_steel_iv/cheat_tables) |
 | The Legend of Heroes - Trails into Reverie | [trails-into-reverie-converter](./save_convert/trails_of/reverie/README.md) | [trails-into-reverie-cheat-tables](./save_convert/trails_of/reverie/cheat_tables) |
+| The Legend of Heroes - Trails through Daybreak | No-Conversion Needed | [trails-through-daybreak-i-cheat-tables](./save_convert/trails_of/daybreak_i/cheat_tables) |
+| The Legend of Heroes - Trails through Daybreak II | No-Conversion Needed | [trails-through-daybreak-ii-cheat-tables](./save_convert/trails_of/daybreak_ii/cheat_tables) |
+| The Legend of Heroes - Trails beyond the Horizon | No-Conversion Needed | [trails-beyond-the-horizon-cheat-tables](./save_convert/trails_of/horizon/cheat_tables) |
 
 
 ## Contributors Notes

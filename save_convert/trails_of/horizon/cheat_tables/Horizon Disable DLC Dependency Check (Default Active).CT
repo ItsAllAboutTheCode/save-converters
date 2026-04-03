@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Disable DLC Dependency Check"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : kai.exe
+  Version:
+  Date   : 2026-01-16
+  Author : SandwichSage
+
+  This script disables the savedata DLC check as well as set all DLC flags to 0
+  post load.
+  Once the loaded file is saved again, the DLC check no longer needs to be enabled
+  Side Effects: Marks all DLC as unobtained, so they can be obtained again via
+  the DLC item menu
+
+  If the script stops working due to a future game update
+  It can be fixed by updating the jmp instuction at the end of
+  the memset_dlc_bitmap_loop label
+  It needs to jump +0x91 hex from the INJECTION POINT address
+  ie. if INJECTION_POINT kai.exe+400001 -> update to kai.exe+400092
+}
+
+[ENABLE]
+
+
+aobscanmodule(savedata_dlc_verification_aob,kai.exe,0F 85 9B 00 00 00 C7) // should be unique
+alloc(newmem,$1000,savedata_dlc_verification_aob)
+
+label(code)
+label(memset_dlc_bitmap_loop)
+
+newmem:
+
+code:
+  push rcx
+  xor rcx rcx
+memset_dlc_bitmap_loop:
+  // loop over the dlc flags from the loaded savedata and set to 00
+  // the dlc flags are stored as a bitmap.
+  // There is a max of 1024 dlc flags with stored across 128 bytes(1024 / 8 bits)
+  mov byte ptr [r14+rcx+002978E0],0
+  inc rcx
+  cmp rcx, 0x80 { 128 }
+  jb memset_dlc_bitmap_loop
+  pop rcx
+  jmp kai.exe+4F3186
+
+savedata_dlc_verification_aob:
+  jmp newmem
+  nop
+
+registersymbol(savedata_dlc_verification_aob)
+
+[DISABLE]
+
+savedata_dlc_verification_aob:
+  db 0F 85 9B 00 00 00
+
+unregistersymbol(savedata_dlc_verification_aob)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: kai.exe+4F30E5
+
+kai.exe+4F30C8: 48 83 C4 20                    - add rsp,20
+kai.exe+4F30CC: 41 5E                          - pop r14
+kai.exe+4F30CE: 5F                             - pop rdi
+kai.exe+4F30CF: 5E                             - pop rsi
+kai.exe+4F30D0: C3                             - ret
+kai.exe+4F30D1: 48 8B 0D 78 D1 86 00           - mov rcx,[kai.exe+D60250]
+kai.exe+4F30D8: 45 33 C0                       - xor r8d,r8d
+kai.exe+4F30DB: 49 8B D6                       - mov rdx,r14
+kai.exe+4F30DE: E8 CD 84 FF FF                 - call kai.exe+4EB5B0
+kai.exe+4F30E3: 84 C0                          - test al,al
+// ---------- INJECTING HERE ----------
+kai.exe+4F30E5: 0F 85 9B 00 00 00              - jne kai.exe+4F3186
+// ---------- DONE INJECTING  ----------
+kai.exe+4F30EB: C7 87 04 AF 69 00 0B 00 00 00  - mov [rdi+0069AF04],0000000B
+kai.exe+4F30F5: E8 96 CD 13 00                 - call kai.exe+62FE90
+kai.exe+4F30FA: 48 8B C8                       - mov rcx,rax
+kai.exe+4F30FD: E8 BE CE 13 00                 - call kai.exe+62FFC0
+kai.exe+4F3102: 48 8D 0D B0 F3 65 00           - lea rcx,[kai.exe+B524B9]
+kai.exe+4F3109: BA 9F 85 FB 41                 - mov edx,41FB859F
+kai.exe+4F310E: 84 C0                          - test al,al
+kai.exe+4F3110: 75 07                          - jne kai.exe+4F3119
+kai.exe+4F3112: 48 8D 0D C0 F3 65 00           - lea rcx,[kai.exe+B524D9]
+kai.exe+4F3119: E8 D2 A9 B7 FF                 - call kai.exe+6DAF0
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Disable Save Checksum"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : kai.exe
+  Version:
+  Date   : 2026-01-16
+  Author : SandwichSage
+
+  This script skips the save checksum validation
+  The checksum is located at offset 0x8 within the decompressed user.dat file
+  for a save
+}
+
+[ENABLE]
+
+aobscanmodule(disable_save_checksum_aob,kai.exe,0F 45 CA 8B C1 48 83 C4 20 5B C3 CC CC CC 40) // should be unique
+alloc(newmem,$1000,disable_save_checksum_aob)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  // The previous instruction of cmp [rbx+08],eax
+  // compares the calculated CRC checksum in register eax
+  // against the checksum from the save file stored
+  // in memory address [rbx + 08] or 8 bytes within the user.dat save file
+  // Therefore the conditional move of the error code in edx is skipped
+  mov eax,ecx
+  jmp return
+
+disable_save_checksum_aob:
+  jmp newmem
+return:
+registersymbol(disable_save_checksum_aob)
+
+[DISABLE]
+
+disable_save_checksum_aob:
+  db 0F 45 CA 8B C1
+
+unregistersymbol(disable_save_checksum_aob)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: kai.exe+4EB7A2
+
+kai.exe+4EB77F: B8 02 00 00 00  - mov eax,00000002
+kai.exe+4EB784: 48 83 C4 20     - add rsp,20
+kai.exe+4EB788: 5B              - pop rbx
+kai.exe+4EB789: C3              - ret
+kai.exe+4EB78A: 48 8D 4A 0C     - lea rcx,[rdx+0C]
+kai.exe+4EB78E: BA 0C 8C 29 00  - mov edx,00298C0C
+kai.exe+4EB793: E8 C8 3E 23 00  - call kai.exe+71F660
+kai.exe+4EB798: 33 C9           - xor ecx,ecx
+kai.exe+4EB79A: BA 03 00 00 00  - mov edx,00000003
+kai.exe+4EB79F: 39 43 08        - cmp [rbx+08],eax
+// ---------- INJECTING HERE ----------
+kai.exe+4EB7A2: 0F 45 CA        - cmovne ecx,edx
+// ---------- DONE INJECTING  ----------
+kai.exe+4EB7A5: 8B C1           - mov eax,ecx
+kai.exe+4EB7A7: 48 83 C4 20     - add rsp,20
+kai.exe+4EB7AB: 5B              - pop rbx
+kai.exe+4EB7AC: C3              - ret
+kai.exe+4EB7AD: CC              - int 3
+kai.exe+4EB7AE: CC              - int 3
+kai.exe+4EB7AF: CC              - int 3
+kai.exe+4EB7B0: 40 53           - push rbx
+kai.exe+4EB7B2: 48 83 EC 20     - sub rsp,20
+kai.exe+4EB7B6: 83 3A 00        - cmp dword ptr [rdx],00
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"Disable Save Compression"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : kai.exe
+  Version:
+  Date   : 2026-01-17
+  Author : Sandwich Sage
+
+  This script disables compression of saves when using the NIS version.
+  Uncompressed saves can be loaded directly in the game,
+  so there is no requirement to recompress the save.
+
+  Additional Notes:
+    Write ZStd magic: kai.exe+8DD1FA - 41 C7 03 28B52FFD     - mov [r11],FD2FB528
+    Read ZStd magic: kai.exe+8E0B2D - 3D 28B52FFD           - cmp eax,FD2FB528
+    Write ZStd Compressed data: kai.exe+8D34A6 - E8 15180000           - call kai.exe+8D4CC0
+    Instruction where compression algorithm to use check occurs: kai.exe+878CCA - 4D 85 C0              - test r8,r8
+    Instruction where compression algorithm parameter is set before calling the save function: kai.exe+4FC8BE: 41 B8 02 00 00 00  - mov r8d,00000002
+      The value of 2 = ZStd and 0 = No Compression.
+      (Educated Guess?) 1 = Falcom Type 1 compression algo is used.
+}
+
+[ENABLE]
+
+aobscanmodule(disable_save_compression_aob,kai.exe,58 45 33 C9 41 B8 02 00 00 00) // should be unique
+alloc(newmem,$1000,disable_save_compression_aob)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  mov r8d,0
+  jmp return
+
+disable_save_compression_aob+04:
+  jmp newmem
+  nop
+return:
+registersymbol(disable_save_compression_aob)
+
+[DISABLE]
+
+disable_save_compression_aob+04:
+  db 41 B8 02 00 00 00
+
+unregistersymbol(disable_save_compression_aob)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: kai.exe+4FC8BE
+
+kai.exe+4FC894: 74 14              - je kai.exe+4FC8AA
+kai.exe+4FC896: 48 8D 4C 24 28     - lea rcx,[rsp+28]
+kai.exe+4FC89B: E8 70 FC 23 00     - call kai.exe+73C510
+kai.exe+4FC8A0: BE 06 00 00 00     - mov esi,00000006
+kai.exe+4FC8A5: E9 C7 02 00 00     - jmp kai.exe+4FCB71
+kai.exe+4FC8AA: 49 8B 06           - mov rax,[r14]
+kai.exe+4FC8AD: 48 89 44 24 50     - mov [rsp+50],rax
+kai.exe+4FC8B2: 49 8B 46 08        - mov rax,[r14+08]
+kai.exe+4FC8B6: 48 89 44 24 58     - mov [rsp+58],rax
+kai.exe+4FC8BB: 45 33 C9           - xor r9d,r9d
+// ---------- INJECTING HERE ----------
+kai.exe+4FC8BE: 41 B8 02 00 00 00  - mov r8d,00000002
+// ---------- DONE INJECTING  ----------
+kai.exe+4FC8C4: 48 8D 54 24 50     - lea rdx,[rsp+50]
+kai.exe+4FC8C9: 48 8D 4C 24 20     - lea rcx,[rsp+20]
+kai.exe+4FC8CE: E8 8D C3 37 00     - call kai.exe+878C60
+kai.exe+4FC8D3: 90                 - nop
+kai.exe+4FC8D4: 48 8B 44 24 20     - mov rax,[rsp+20]
+kai.exe+4FC8D9: 48 8B 10           - mov rdx,[rax]
+kai.exe+4FC8DC: 4C 8B 40 08        - mov r8,[rax+08]
+kai.exe+4FC8E0: 4C 2B C2           - sub r8,rdx
+kai.exe+4FC8E3: 48 8D 4C 24 28     - lea rcx,[rsp+28]
+kai.exe+4FC8E8: E8 73 00 24 00     - call kai.exe+73C960
+}
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>PROCESS_NAME = 'kai.exe'
+AUTO_ACTIVE_SCRIPTS = {}
+table.insert(AUTO_ACTIVE_SCRIPTS, 'Disable DLC Dependency Check')
+table.insert(AUTO_ACTIVE_SCRIPTS, 'Disable Save Checksum')
+table.insert(AUTO_ACTIVE_SCRIPTS, 'Disable Save Compression')
+--------
+-------- Auto Attach
+--------
+local autoAttachTimer = nil ---- variable to hold timer object
+local autoAttachTimerInterval = 1000 ---- Timer intervals are in milliseconds
+local autoAttachTimerTicks = 0 ---- variable to count number of times the timer has run
+local autoAttachTimerTickMax = 10000 ---- Set to zero to disable ticks max
+local function autoAttachTimer_tick(timer) ---- Timer tick call back
+    ---- Destroy timer if max ticks is reached
+    if autoAttachTimerTickMax &gt; 0 and autoAttachTimerTicks &gt;= autoAttachTimerTickMax then
+        timer.destroy()
+    end
+    ---- Check if process is running
+    if getProcessIDFromProcessName(PROCESS_NAME) ~= nil then
+        timer.destroy() ---- Destroy timer
+        openProcess(PROCESS_NAME) ---- Open the process
+        for i, script_name in ipairs(AUTO_ACTIVE_SCRIPTS) do
+            getAddressList().getMemoryRecordByDescription(script_name).Active = true
+        end
+    end
+    autoAttachTimerTicks = autoAttachTimerTicks + 1 ---- Increase ticks
+end
+autoAttachTimer = createTimer(getMainForm()) ---- Create timer with the main form as it's parent
+autoAttachTimer.Interval = autoAttachTimerInterval ---- Set timer interval
+autoAttachTimer.OnTimer = autoAttachTimer_tick ---- Set timer tick call back
+</LuaScript>
+</CheatTable>

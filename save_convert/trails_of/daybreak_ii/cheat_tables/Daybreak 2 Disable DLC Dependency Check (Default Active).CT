@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Disable DLC Dependency Check"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : kuro2.exe
+  Version:
+  Date   : 2026-01-16
+  Author : SandwichSage
+
+  This script disables the savedata DLC check as well as set all DLC flags to 0
+  post load.
+  Once the loaded file is saved again, the DLC check no longer needs to be enabled
+  Side Effects: Marks all DLC as unobtained, so they can be obtained again via
+  the DLC item menu
+}
+
+[ENABLE]
+
+aobscanmodule(savefile_dlc_verification_aob,kuro2.exe,ED 75 59 C7 87 C4 22 40 00 0A 00 00 00) // should be unique
+alloc(newmem,$1000,savefile_dlc_verification_aob)
+
+label(code)
+label(memset_dlc_bitmap_loop)
+
+newmem:
+
+code:
+  push rcx
+  xor rcx rcx
+memset_dlc_bitmap_loop:
+  // loop over the dlc flags from the loaded savedata and set to 00
+  // the dlc flags are stored as a bitmap.
+  // There is a max of 1024 dlc flags with stored across 128 bytes(1024 / 8 bits)
+  mov byte ptr [r15+rcx+00270C38],0
+  inc rcx
+  cmp rcx, 0x80 { 128 }
+  jb memset_dlc_bitmap_loop
+  pop rcx
+  jmp kuro2.exe+43416B
+
+savefile_dlc_verification_aob+01:
+  jmp newmem
+  nop 7
+
+registersymbol(savefile_dlc_verification_aob)
+
+[DISABLE]
+
+savefile_dlc_verification_aob+01:
+  db 75 59 C7 87 C4 22 40 00 0A 00 00 00
+
+unregistersymbol(savefile_dlc_verification_aob)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: kuro2.exe+434110
+
+kuro2.exe+4340EF: FF C2                          - inc edx
+kuro2.exe+4340F1: 41 3B D0                       - cmp edx,r8d
+kuro2.exe+4340F4: 72 EA                          - jb kuro2.exe+4340E0
+kuro2.exe+4340F6: 45 32 ED                       - xor r13b,r13b
+kuro2.exe+4340F9: FF C5                          - inc ebp
+kuro2.exe+4340FB: 49 FF C4                       - inc r12
+kuro2.exe+4340FE: 41 D0 C6                       - rol r14b,1
+kuro2.exe+434101: 81 FD 00 04 00 00              - cmp ebp,00000400
+kuro2.exe+434107: 0F 82 33 FF FF FF              - jb kuro2.exe+434040
+kuro2.exe+43410D: 45 84 ED                       - test r13b,r13b
+// ---------- INJECTING HERE ----------
+kuro2.exe+434110: 75 59                          - jne kuro2.exe+43416B
+// ---------- DONE INJECTING  ----------
+kuro2.exe+434112: C7 87 C4 22 40 00 0A 00 00 00  - mov [rdi+004022C4],0000000A
+kuro2.exe+43411C: BA 9F 85 FB 41                 - mov edx,41FB859F
+kuro2.exe+434121: 48 8D 0D 31 F0 4F 00           - lea rcx,[kuro2.exe+933159]
+kuro2.exe+434128: E8 D3 41 C0 FF                 - call kuro2.exe+38300
+kuro2.exe+43412D: 8B 8F F8 20 40 00              - mov ecx,[rdi+004020F8]
+kuro2.exe+434133: 83 F9 20                       - cmp ecx,20
+kuro2.exe+434136: 73 12                          - jae kuro2.exe+43414A
+kuro2.exe+434138: 8B D1                          - mov edx,ecx
+kuro2.exe+43413A: 48 8B 8F F0 20 40 00           - mov rcx,[rdi+004020F0]
+kuro2.exe+434141: 89 04 91                       - mov [rcx+rdx*4],eax
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Disable Save Checksum"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : kuro2.exe
+  Version:
+
+  This script skips the save checksum validation
+  The checksum is located at offset 0x8 within the decompressed user.dat file
+  for a save
+}
+
+[ENABLE]
+
+aobscanmodule(disable_save_checksum_aob,kuro2.exe,74 5C BB 03 00 00 00) // should be unique
+alloc(newmem,$1000,disable_save_checksum_aob)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  jmp kuro2.exe+434026
+
+disable_save_checksum_aob:
+  jmp newmem
+  nop 2
+return:
+registersymbol(disable_save_checksum_aob)
+
+[DISABLE]
+
+disable_save_checksum_aob:
+  db 74 5C BB 03 00 00 00
+
+unregistersymbol(disable_save_checksum_aob)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: kuro2.exe+433FC8
+
+kuro2.exe+433F9C: C7 81 C4 22 40 00 0A 00 00 00  - mov [rcx+004022C4],0000000A
+kuro2.exe+433FA6: 48 8D 0D 2C F2 4F 00           - lea rcx,[kuro2.exe+9331D9]
+kuro2.exe+433FAD: EB 32                          - jmp kuro2.exe+433FE1
+kuro2.exe+433FAF: 83 7A 04 02                    - cmp dword ptr [rdx+04],02
+kuro2.exe+433FB3: 74 07                          - je kuro2.exe+433FBC
+kuro2.exe+433FB5: BB 02 00 00 00                 - mov ebx,00000002
+kuro2.exe+433FBA: EB 13                          - jmp kuro2.exe+433FCF
+kuro2.exe+433FBC: 49 8B CF                       - mov rcx,r15
+kuro2.exe+433FBF: E8 1C 18 E3 FF                 - call kuro2.exe+2657E0
+kuro2.exe+433FC4: 41 39 47 08                    - cmp [r15+08],eax
+// ---------- INJECTING HERE ----------
+kuro2.exe+433FC8: 74 5C                          - je kuro2.exe+434026
+// ---------- DONE INJECTING  ----------
+kuro2.exe+433FCA: BB 03 00 00 00                 - mov ebx,00000003
+kuro2.exe+433FCF: B8 0A 00 00 00                 - mov eax,0000000A
+kuro2.exe+433FD4: 89 87 C4 22 40 00              - mov [rdi+004022C4],eax
+kuro2.exe+433FDA: 48 8D 0D 18 F1 4F 00           - lea rcx,[kuro2.exe+9330F9]
+kuro2.exe+433FE1: BA 9F 85 FB 41                 - mov edx,41FB859F
+kuro2.exe+433FE6: E8 15 43 C0 FF                 - call kuro2.exe+38300
+kuro2.exe+433FEB: 8B 8F F8 20 40 00              - mov ecx,[rdi+004020F8]
+kuro2.exe+433FF1: 83 F9 20                       - cmp ecx,20
+kuro2.exe+433FF4: 73 12                          - jae kuro2.exe+434008
+kuro2.exe+433FF6: 8B D1                          - mov edx,ecx
+}
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>PROCESS_NAME = 'kuro2.exe'
+AUTO_ACTIVE_SCRIPTS = {}
+table.insert(AUTO_ACTIVE_SCRIPTS, 'Disable DLC Dependency Check')
+table.insert(AUTO_ACTIVE_SCRIPTS, 'Disable Save Checksum')
+
+--------
+-------- Auto Attach
+--------
+local autoAttachTimer = nil ---- variable to hold timer object
+local autoAttachTimerInterval = 1000 ---- Timer intervals are in milliseconds
+local autoAttachTimerTicks = 0 ---- variable to count number of times the timer has run
+local autoAttachTimerTickMax = 10000 ---- Set to zero to disable ticks max
+local function autoAttachTimer_tick(timer) ---- Timer tick call back
+    ---- Destroy timer if max ticks is reached
+    if autoAttachTimerTickMax &gt; 0 and autoAttachTimerTicks &gt;= autoAttachTimerTickMax then
+        timer.destroy()
+    end
+    ---- Check if process is running
+    if getProcessIDFromProcessName(PROCESS_NAME) ~= nil then
+        timer.destroy() ---- Destroy timer
+        openProcess(PROCESS_NAME) ---- Open the process
+        for i, script_name in ipairs(AUTO_ACTIVE_SCRIPTS) do
+            getAddressList().getMemoryRecordByDescription(script_name).Active = true
+        end
+    end
+    autoAttachTimerTicks = autoAttachTimerTicks + 1 ---- Increase ticks
+end
+autoAttachTimer = createTimer(getMainForm()) ---- Create timer with the main form as it's parent
+autoAttachTimer.Interval = autoAttachTimerInterval ---- Set timer interval
+autoAttachTimer.OnTimer = autoAttachTimer_tick ---- Set timer tick call back
+</LuaScript>
+</CheatTable>
