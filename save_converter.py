@@ -51,7 +51,6 @@ def main():
 
     # No arguments have been supplied so print help
     if len(sys.argv) == 1:
-        parser._subparsers
         parser.print_help(sys.stderr)
         sys.exit(1)
 
