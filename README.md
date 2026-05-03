@@ -14,7 +14,7 @@ There are various tools that can be used to get decrypted console savedata conte
 | :--- | :--- |
 | PS3 | [Apollo Save Tool (PS3)](https://github.com/bucanero/apollo-ps3) |
 | PS4 | [Apollo Save Tool (PS4)](https://github.com/bucanero/apollo-ps4) |
-| PS5 | [Garlic SaveMgr for PS5](https://github.com/earthonion/garlic-savemgr) |
+| PS5 | [Garlic SaveMgr for PS5](https://git.earthonion.com/earthonion/garlic-savemgr) |
 
 
 ## Usage
