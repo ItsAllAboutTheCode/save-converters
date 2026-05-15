@@ -482,7 +482,7 @@ def update_xor_table(
     Only the bytes that have been encrypted will be replaced in the XOR table
     """
     if len(encrypted_view) < len(old_xor_table):
-        new_xor_table = bytes(encrypted_view) + old_xor_table[len(encrypted_view) :]
+        new_xor_table: bytes | memoryview[int] = bytes(encrypted_view) + old_xor_table[len(encrypted_view) :]
     else:
         new_xor_table = encrypted_view[: len(old_xor_table)]
     return bytes(new_xor_table)
