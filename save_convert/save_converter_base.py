@@ -17,12 +17,21 @@ from itertools import islice
 from pathlib import Path
 from typing import NamedTuple, Protocol, override
 
+from save_convert.structs.marshal_structure import ByteorderLiteral, MarshalStructure
+
 LOGGER = logging.getLogger("save_converter_base")
 LOGGER.setLevel(logging.INFO)
 stdoutHandler = logging.StreamHandler()
 LOGGER.addHandler(stdoutHandler)
 
 SCRIPT_NAME = Path(__file__).name
+
+
+def align_up(value: int, alignment: int) -> int:
+    """Align value up to the nearest alignment value
+    alignment must be power of 2
+    """
+    return (value + alignment - 1) & ~(alignment - 1)
 
 
 @dataclass(order=True)
@@ -75,6 +84,18 @@ class SaveFormat(StrEnum):
     XBOXONE = "xboxone"
     XBOXSERIESX = "xboxseriesx"
     UNK = "unknown"
+
+
+BIG_ENDIAN_SAVE_PLATFORMS = [SaveFormat.PS3]
+
+LITTLE_ENDIAN_SAVE_PLATFORMS = [
+    SaveFormat.NSW,
+    SaveFormat.PS4,
+    SaveFormat.PS5,
+    SaveFormat.PC,
+    SaveFormat.XBOXONE,
+    SaveFormat.XBOXSERIESX,
+]
 
 
 @dataclass(order=True, frozen=True)
@@ -850,17 +871,17 @@ class SaveBase(ABC):
     def transform(self) -> bool:
         op_result = self._pre_transform()
         if not op_result:
-            LOGGER.error(f"Pre-convert failed when running {__class__.__name__} converter")  # type:ignore[name-defined]
+            LOGGER.error(f"Pre-convert failed when running {type(self).__name__} converter")  # type:ignore[name-defined]
             return False
 
         op_result = self._transform()
         if not op_result:
-            LOGGER.error(f"Convert failed when running {__class__.__name__} converter")  # type:ignore[name-defined]
+            LOGGER.error(f"Convert failed when running {type(self).__name__} converter")  # type:ignore[name-defined]
             return False
 
         op_result = self._post_transform()
         if not op_result:
-            LOGGER.error(f"Post-Convert failed when running {__class__.__name__} converter")  # type:ignore[name-defined]
+            LOGGER.error(f"Post-Convert failed when running {type(self).__name__} converter")  # type:ignore[name-defined]
             return False
 
         return True
@@ -883,7 +904,7 @@ class SaveBase(ABC):
 
 class SaveTransformBase(SaveBase, ABC):
     """
-    Base Class for save transformation from a source file to a targe file
+    Base Class for save transformation from a source file to a target file
     """
 
     _input_path: Path
@@ -933,8 +954,8 @@ class SaveTransformBase(SaveBase, ABC):
             self._output_path.parent.mkdir(parents=True, exist_ok=True)
             return bool(shutil.move(tmp_output_path, self._output_path))
 
+    @staticmethod
     def process_input_savedata(
-        self,
         input_result: PatchOperationResult,
         source_data: bytes,
         patch_set: PatchSet,
@@ -994,71 +1015,79 @@ class SaveConvertBase(SaveTransformBase, ABC):
     @abstractmethod
     def _transform(self) -> bool:
         """Iterates over the input save file, attempting byte replacements from the source save format
-        in order to convert the target save format
+        in order to convert to the target save format
         """
-
-        convert_patch_set: PatchSet = self._patch_table.get_patch_set_for_convert_format(self._convert_format)
-        target_save_size = self._patch_table.get_save_size_for_format(self._convert_format.target)
-        if not target_save_size:
-            LOGGER.error(
-                f"Target save format {self._convert_format.target} does not have an expected save size mapped.\n"
-                f"It will be assumed to be {sys.maxsize}",
-            )
-            target_save_size = sys.maxsize
-
-        # Reset Output iO object every time convet is called
-        self._output_io: BytesIO = BytesIO()
-        patch_index = 0
-
-        result: PatchOperationResult = PatchOperationResult(
-            target_data=b"", target_write_offset=0, new_source_offset=0, patch_complete=PatchOperationState.Skip
-        )
-        while result.target_write_offset < target_save_size:
-            result = self.process_input_savedata(
-                result,
-                source_data=self._input_data,
-                patch_set=convert_patch_set,
-                current_patch_index=patch_index,
-                convert_format=self._convert_format,
-            )
-
+        if output_data := self.apply_patch(self._input_data, self._patch_table, self._convert_format):
             try:
-                if self._output_io.tell() != result.target_write_offset:
+                if self._output_io.write(output_data) != len(output_data):
                     LOGGER.error(
-                        f"Target write offset 0x{result.target_write_offset:X} does not match the end of the' \
-                        f' ByteIO buffer. ByteIO buffer offset: 0x{self._output_io.tell():X}",
-                    )
-                    return False
-                elif self._output_io.write(result.target_data) != len(result.target_data):
-                    LOGGER.error(
-                        f"Unable to write {len(result.target_data)} bytes to output.\n"
+                        f"Unable to write {len(output_data)} bytes to output.\n"
                         f" ByteIO buffer offset: 0x{self._output_io.tell():X}",
                     )
                     return False
             except OSError as _err:
                 LOGGER.exception("Failed to write to output\n")
                 return False
+            return True
+
+        return False
+
+    @abstractmethod
+    def create_save_patch_table(self) -> ConvertPatchTable:
+        return ConvertPatchTable(convert_format_to_patch_set={}, save_format_to_save_size_dict={})
+
+    @staticmethod
+    def apply_patch(input_data: bytes, patch_table: ConvertPatchTable, convert_format: ConvertFormat) -> bytes:
+        """Patches the input buffer using the patch table and returns a bytes object"""
+
+        convert_patch_set: PatchSet = patch_table.get_patch_set_for_convert_format(convert_format)
+        target_save_size = patch_table.get_save_size_for_format(convert_format.target)
+        if not target_save_size:
+            LOGGER.error(
+                f"Target save format {convert_format.target} does not have an expected save size mapped.\n"
+                f"It will be assumed to be {sys.maxsize}",
+            )
+            target_save_size = sys.maxsize
+
+        output_buffer = bytearray()
+        patch_index = 0
+
+        result: PatchOperationResult = PatchOperationResult(
+            target_data=b"", target_write_offset=0, new_source_offset=0, patch_complete=PatchOperationState.Skip
+        )
+        while result.target_write_offset < target_save_size:
+            result = SaveTransformBase.process_input_savedata(
+                input_result=result,
+                source_data=input_data,
+                patch_set=convert_patch_set,
+                current_patch_index=patch_index,
+                convert_format=convert_format,
+            )
+
+            if len(output_buffer) != result.target_write_offset:
+                LOGGER.error(
+                    f"Target write offset 0x{result.target_write_offset:X} does not match the end of the"
+                    + f" Byte buffer. Byte buffer offset: 0x{len(output_buffer):X}",
+                )
+                return b""
+            output_buffer += result.target_data
 
             # If no progress has been made in the processing of the input data
             # Then return to prevent an infinite loop
             if result.patch_complete == PatchOperationState.Skip:
                 LOGGER.error(
                     "Failed to to make progress processing source data, target stream has stopped writing"
-                    f" at offset: 0x{self._output_io.tell():X}\nPatch Operation failed at index {patch_index}"
-                    f" for conversion of {self._convert_format}:\n"
+                    f" at offset: 0x{len(output_buffer):X}\nPatch Operation failed at index {patch_index}"
+                    f" for conversion of {convert_format}:\n"
                     f"  Patch Operation Result: {result}"
                 )
-                return False
+                return b""
 
             # Update the current offset being processed and the patch set index
             patch_index += 1 if result.patch_complete else 0
             result.target_write_offset += len(result.target_data)
 
-        return True
-
-    @abstractmethod
-    def create_save_patch_table(self) -> ConvertPatchTable:
-        return ConvertPatchTable(convert_format_to_patch_set={}, save_format_to_save_size_dict={})
+        return bytes(output_buffer)
 
 
 class SaveCryptBase(SaveTransformBase, ABC):
@@ -1075,3 +1104,131 @@ class SaveCryptBase(SaveTransformBase, ABC):
         if not self._output_path:
             self._output_path: Path = self._input_path.with_suffix(f"{self._input_path.suffix}.{self._save_format}")
             LOGGER.debug(f'No Output path specified, it has updated to "{self._output_path}"')
+
+
+class BinSaveToYamlConvert(SaveTransformBase):
+    """
+    Convert a binary save file to YAML file based on a defiend MarshalStructure derived class
+    """
+
+    _byteorder: ByteorderLiteral
+    _struct_type: type[MarshalStructure]
+    _with_comments: bool  # If set yaml will be annotated with comments about the structure fields
+
+    def __init__(self, args: argparse.Namespace, struct_type: type[MarshalStructure]):
+        """
+        param :struct_type MarshalStructure derived class that specifies
+        the fields of a c-like binary structure
+        """
+        super().__init__(args)
+        self._struct_type = struct_type
+        self._with_comments = getattr(args, "with_comments", False)
+        # Use any specified byteorder option if provided for the endianess
+        # If not specified, attempt to use the save_format option endianess
+        # and if that is not specified use the system byteorder
+        byteorder: ByteorderLiteral | None = getattr(args, "byteorder", None)
+        if not byteorder:
+            save_format = getattr(args, "save_format", SaveFormat.UNK)
+            if save_format in LITTLE_ENDIAN_SAVE_PLATFORMS:
+                byteorder = "little"
+            elif save_format in BIG_ENDIAN_SAVE_PLATFORMS:
+                byteorder = "big"
+            else:
+                byteorder = sys.byteorder
+
+        self._byteorder = byteorder
+
+        if not self._output_path:
+            self._output_path: Path = self._input_path.with_suffix(".yaml")
+            LOGGER.debug(f'No Output path specified, it has updated to "{self._output_path}"')
+
+    @override
+    def _pre_transform(self) -> bool:
+        return super()._pre_transform()
+
+    @override
+    def _transform(self) -> bool:
+        return self.convert_bin_save_to_yaml()
+
+    @override
+    def _post_transform(self) -> bool:
+        return super()._post_transform()
+
+    def convert_bin_save_to_yaml(self) -> bool:
+        """
+        Convert binary to save
+        """
+        struct_inst = self._struct_type()
+        result = struct_inst.from_bytes(memoryview(self._input_data), struct_inst, self._byteorder)
+        if not result:
+            return False
+
+        to_yaml_result = struct_inst.to_yaml(self._with_comments)
+        if not to_yaml_result:
+            return False
+
+        return self._output_io.write(to_yaml_result.value) == len(to_yaml_result.value)
+
+
+class YamlToBinSaveConvert(SaveTransformBase):
+    """
+    Convert a Yaml file of to a ctypes struct derived from MarshalStructure
+    """
+
+    _byteorder: ByteorderLiteral
+    _struct_type: type[MarshalStructure]
+
+    def __init__(self, args: argparse.Namespace, struct_type: type[MarshalStructure]):
+        """
+        param :struct_type MarshalStructure derived class that specifies
+        the fields of a c-like binary structure
+        """
+        super().__init__(args)
+        self._struct_type = struct_type
+        # Use any specified byteorder option if provided for the endianess
+        # If not specified, attempt to use the save_format option endianess
+        # and if that is not specified use the system byteorder
+        byteorder: ByteorderLiteral | None = getattr(args, "byteorder", None)
+        if not byteorder:
+            save_format = getattr(args, "save_format", SaveFormat.UNK)
+            if save_format in LITTLE_ENDIAN_SAVE_PLATFORMS:
+                byteorder = "little"
+            elif save_format in BIG_ENDIAN_SAVE_PLATFORMS:
+                byteorder = "big"
+            else:
+                byteorder = sys.byteorder
+
+        self._byteorder = byteorder
+
+        if not self._output_path:
+            self._output_path: Path = self._input_path.with_suffix(".bin")
+            LOGGER.debug(f'No Output path specified, it has updated to "{self._output_path}"')
+
+    @override
+    def _pre_transform(self) -> bool:
+        return super()._pre_transform()
+
+    @override
+    def _transform(self) -> bool:
+        return self.convert_yaml_to_bin_save()
+
+    @override
+    def _post_transform(self) -> bool:
+        return super()._post_transform()
+
+    def convert_yaml_to_bin_save(self) -> bool:
+        """
+        Convert a YAML file to a binary save file based on a defiend MarshalStructure derived class
+        """
+        result = self._struct_type.from_yaml(self._input_data, self._struct_type)
+        if not result or not result.value:
+            return False
+
+        struct_inst = result.value
+
+        output_byte_buffer = bytearray()
+        to_bytes_result = struct_inst.to_bytes(output_byte_buffer, self._byteorder)
+        if not to_bytes_result:
+            return False
+
+        return self._output_io.write(output_byte_buffer) == len(output_byte_buffer)
