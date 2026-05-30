@@ -18,7 +18,8 @@ classifiers = [
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 dependencies = [
-      "pycryptodome>=3.23.0"
+      "pycryptodome>=3.23.0",
+      "ruamel.yaml>=0.19.0"
 ]
 
 [project.urls]
