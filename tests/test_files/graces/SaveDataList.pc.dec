@@ -1,0 +1,622 @@
+[
+  {
+    "saveDate": {
+      "year": 2025,
+      "month": 1,
+      "day": 17,
+      "hour": 21,
+      "minutes": 36,
+      "seconds": 54
+    },
+    "playTime": 13394,
+    "leaderLevel": 3,
+    "to10": 101010000,
+    "sv_sce_no": 3145728,
+    "partyLeader": 8,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 1,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 2025,
+      "month": 1,
+      "day": 17,
+      "hour": 21,
+      "minutes": 36,
+      "seconds": 59
+    },
+    "playTime": 13702,
+    "leaderLevel": 3,
+    "to10": 101010000,
+    "sv_sce_no": 3145728,
+    "partyLeader": 8,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 1,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 2026,
+      "month": 5,
+      "day": 18,
+      "hour": 15,
+      "minutes": 15,
+      "seconds": 10
+    },
+    "playTime": 13830,
+    "leaderLevel": 3,
+    "to10": 101010000,
+    "sv_sce_no": 3145728,
+    "partyLeader": 8,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 1,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 0,
+      "month": 0,
+      "day": 0,
+      "hour": 0,
+      "minutes": 0,
+      "seconds": 0
+    },
+    "playTime": 0,
+    "leaderLevel": 0,
+    "to10": 0,
+    "sv_sce_no": 0,
+    "partyLeader": 0,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 0,
+    "isValid": 0,
+    "futer_play": 0
+  },
+  {
+    "saveDate": {
+      "year": 2025,
+      "month": 1,
+      "day": 17,
+      "hour": 21,
+      "minutes": 36,
+      "seconds": 32
+    },
+    "playTime": 12123,
+    "leaderLevel": 3,
+    "to10": 101010000,
+    "sv_sce_no": 3145728,
+    "partyLeader": 8,
+    "ending": 0,
+    "listParam0": 0,
+    "sectionClearFlag": 47,
+    "isValid": 1,
+    "futer_play": 0
+  }
+]
