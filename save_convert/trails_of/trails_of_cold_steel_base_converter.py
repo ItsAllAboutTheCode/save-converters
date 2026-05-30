@@ -268,7 +268,7 @@ class SaveConvertColdSteelBase(SaveConvertBase, ABC):
 
 
 def build_crc_table(crc32_poly: int = TRAILS_OF_CRC32_POLYNOMIAL):
-    """Calculate CRC32 for body starting at BODY_OFFSET, init with body length. Returns 4-byte little-endian."""
+    """Builds the Crc32 table to checksum save."""
     table = [0] * 256
     for i in range(256):
         v = i
