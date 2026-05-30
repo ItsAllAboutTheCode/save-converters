@@ -12,7 +12,11 @@ class ModuleInfo(NamedTuple):
 ConverterModules: TypeAlias = dict[str, ModuleInfo]
 converter_modules: ConverterModules = {
     "tales-of-arise": ModuleInfo("save_convert.tales_of.arise.tales_of_arise_save_converter", ["arise"]),
+    "tales-of-graces-f": ModuleInfo(
+        "save_convert.tales_of.graces.tales_of_graces_f_save_converter", ["graces", "graces-f"]
+    ),
     "tales-of-vesperia": ModuleInfo("save_convert.tales_of.vesperia.tales_of_vesperia_save_converter", ["vesperia"]),
+    "tales-of-xillia": ModuleInfo("save_convert.tales_of.xillia.tales_of_xillia_save_converter", ["xillia"]),
     "trails-of-cold-steel-i": ModuleInfo(
         "save_convert.trails_of.cold_steel_i.trails_of_cold_steel_i_save_converter",
         aliases=["cold-steel", "cold-steel-i"],

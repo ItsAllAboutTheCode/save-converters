@@ -34,8 +34,10 @@ Save converters or decrypters are supported for the following games:
 | Game | Script | Cheat Tables |
 | :--- | :--- | :-- |
 | Tales of Arise | [tales-of-arise-converter-decrypter](./save_convert/tales_of/arise/README.md) | None |
-| Tales of Berseria Original -> Remastered | [tales-of-beseria-remastered-convert-notes](./save_convert/tales_of/berseria/README.md) | None |
+| Tales of Berseria | [tales-of-beseria-remastered-convert-notes](./save_convert/tales_of/berseria/README.md) | None |
+| Tales of Graces f | [tales-of-graces-f-converter-decrypter](./save_convert/tales_of/graces/README.md) | None |
 | Tales of Vesperia | [tales-of-vesperia-converter](./save_convert/tales_of/vesperia/README.md) | [tales-of-vesperia-cheat-tables](./save_convert/tales_of/vesperia/cheat_tables) |
+| Tales of Xillia | [tales-of-xillia-decrypter](./save_convert/tales_of/xillia/README.md) | None |
 | The Legend of Heroes - Trails of Cold Steel I | [trails-of-cold-steel-i-converter](./save_convert/trails_of/cold_steel_i/README.md) | [trails-of-cold-steel-i-cheat-tables](./save_convert/trails_of/cold_steel_i/cheat_tables) |
 | The Legend of Heroes - Trails of Cold Steel II | [trails-of-cold-steel-ii-converter](./save_convert/trails_of/cold_steel_ii/README.md) | [trails-of-cold-steel-ii-cheat-tables](./save_convert/trails_of/cold_steel_ii/cheat_tables) |
 | The Legend of Heroes - Trails of Cold Steel III | [trails-of-cold-steel-iii-converter](./save_convert/trails_of/cold_steel_iii/README.md) | [trails-of-cold-steel-iii-cheat-tables](./save_convert/trails_of/cold_steel_iii/cheat_tables) |
