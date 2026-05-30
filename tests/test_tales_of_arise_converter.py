@@ -53,7 +53,7 @@ TEST_ENCRYPT_PARAM_LIST: list[TestCryptSaveTuple] = [
     TestCryptSaveTuple(Path("DLC_SAVE.pc.dec"), TALES_OF_ARISE_DLC_SAVE_SIZE),
 ]
 
-# Test the convert-encrypted-save logic which peforms decryption, save-conversion between formats and then encryption
+# Test the convert-encrypted-save logic which performs decryption, save-conversion between formats and then encryption
 TEST_CONVERT_ENCRYPT_PARAM_LIST: list[TestCryptSaveConvertTuple] = [
     TestCryptSaveConvertTuple(
         Path("SAVE.ps5.enc"), TALES_OF_ARISE_SAVE_SIZE, [PS5_TO_PC_CONVERT_FORMAT, PS5_TO_PS4_CONVERT_FORMAT]

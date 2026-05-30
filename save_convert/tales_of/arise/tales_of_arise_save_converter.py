@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias, override
 
 from Crypto.Cipher import AES  # type: ignore[import-not-found]
 
+from save_convert.log_utils import format_hex
 from save_convert.save_converter_base import (
     PC_TO_PS4_CONVERT_FORMAT,
     PC_TO_PS5_CONVERT_FORMAT,
@@ -212,7 +213,7 @@ class SaveItemSectionEnum(StrEnum):
 
 class SaveItemSection(NamedTuple):
     """
-    Stores a tuple whihc contains the absolute offset in the decrypted save file
+    Stores a tuple which contains the absolute offset in the decrypted save file
     to the section header for the Save Item block, the absolute offset to the
     start of the Save Item block data and finally the size of the Save Item block
     """
@@ -285,29 +286,6 @@ def abs_to_rel_offset(offset: int, base: int = TALES_OF_ARISE_SAVE_BLOCK_START) 
     Convert an absolute Tales of Arise save offset to a relative save block offset
     """
     return offset - base
-
-
-def format_hex(buffer: bytes | memoryview[int] | bytearray) -> str:
-    """
-    Format a byte buffer for human readability
-    It will be formatted with the style of
-    | XX XX XX XX | XX XX XX XX | XX XX XX XX | XX XX XX XX |
-    | XX XX XX XX | XX XX XX XX | XX XX XX XX | XX XX XX XX |
-    ...
-    | XX XX XX XX | XX XX XX XX | XX XX XX XX | XX XX XX XX |
-
-    Up to the number of bytes in the buffer
-    """
-    return "".join(
-        [
-            f"|{value:02X}" if (index % 4 == 0) else f" {value:02X}{'|\n' if index % 16 == 15 else ''}"
-            for index, value in enumerate(buffer)
-        ]
-    )
-
-
-def pretty_print_hex(buffer: bytes | memoryview[int] | bytearray):
-    print(format_hex(buffer), end="")
 
 
 def rotate_bytes(input: bytes | bytearray | memoryview, n: int) -> bytes:
@@ -1699,8 +1677,8 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
         def convert_encrypted_save(args: argparse.Namespace):
             if hasattr(args, "loglevel"):
                 LOGGER.setLevel(args.loglevel)
-            save_decrypter = SaveConvertAriseEncrypted(args)
-            return save_decrypter.transform()
+            save_converter = SaveConvertAriseEncrypted(args)
+            return save_converter.transform()
 
         convert_encrypted_save_parser.set_defaults(func=convert_encrypted_save)
 
@@ -1731,8 +1709,8 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
         def encrypt_save(args: argparse.Namespace):
             if hasattr(args, "loglevel"):
                 LOGGER.setLevel(args.loglevel)
-            save_converter = SaveEncryptArise(args)
-            return save_converter.transform()
+            save_encrypter = SaveEncryptArise(args)
+            return save_encrypter.transform()
 
         encrypt_parser.set_defaults(func=encrypt_save)
 

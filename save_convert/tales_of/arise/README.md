@@ -1,6 +1,6 @@
 # Tales of Arise Save Converter and Decrypter
 Save Converter for Tales of Arise that can decrypt/encrypt saves as well.  
-It supports PS4, PS5, PC saves with untesteed support for Xbox One and Xbox Series X/S saves.  
+It supports PS4, PS5, PC saves with untested support for Xbox One and Xbox Series X/S saves.  
 Furthermore the decrypted save item section blocks offsets can be dumped using this tool, which can be used for save editing.  
 
 ## Usage
