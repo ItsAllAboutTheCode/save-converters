@@ -17,7 +17,26 @@ There are various tools that can be used to get decrypted console savedata conte
 | PS5 | [Garlic SaveMgr for PS5](https://git.earthonion.com/earthonion/garlic-savemgr) |
 
 
+
+## Getting Started
+
+### Installing required python dependencies (non-PyInstaller executable version ONLY)
+
+NOTE:  
+Only required when running python scripts directly.  
+Not needed when running the executable from the Releases page. 
+
+
+The save converter dependencies on other python packages that can be installed using a python package manager such as `pip` or `uv`.  
+```bash
+uv sync
+```
+or
+```bash
+pip install -e .
+```
 ## Usage
+
 Available converters can found by running the command  
 ```bash
 python save_converter.py --help
