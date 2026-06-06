@@ -1110,6 +1110,7 @@ class MarshalStructure(MarshalStructBase):
         Marshal the array into a python dictionary
         """
         field_type = cast("type[CData]", array_type._type_)
+        array_length: int = cast(int, cast(object, array_type._length_))
 
         # Convert any stringified hex dumps to a byte array for the bytes types
         # The character types are stored as plain strings
@@ -1120,14 +1121,19 @@ class MarshalStructure(MarshalStructBase):
         if field_type == c_char:
             # Arrays of c_char are treated as bytes by the ctypes module
             try:
-                return _ToFieldResult(True, input_array)
+                # Truncate any input array to be at maximumg the size of the array field
+                return _ToFieldResult(
+                    True, input_array if len(input_array) <= array_length else input_array[:array_length]
+                )
             except ValueError as err:
                 LOGGER.error(f"Could not convert input_array to bytes for field type {field_type}: {err}")
                 return _ToFieldResult(False)
         elif field_type == c_wchar:
             # Arrays of c_wchar are treated as str by the ctypes module
             try:
-                return _ToFieldResult(True, input_array)
+                return _ToFieldResult(
+                    True, input_array if len(input_array) <= array_length else input_array[:array_length]
+                )
             except ValueError as err:
                 LOGGER.error(f"Could not convert input_array to string for field type {field_type}: {err}")
                 return _ToFieldResult(False)
