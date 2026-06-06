@@ -68,11 +68,3 @@ Therefore the save file is always twice the size, than it needs to be
         }
     }
 ```
-
-# Side Quest search
-`[0xB0A0, 0x13500)` - works
-`[0xC1F0, 0x13500)` - works
-`[0xC1F0, 0xC4F4)` - works
-`[0xC1F0, 0xC440)` - fails
-`[0xC4A4, 0xC4E0)` - fails
-`[0xC458, 0xC480)` - works

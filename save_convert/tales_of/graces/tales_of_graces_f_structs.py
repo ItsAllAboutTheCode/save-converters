@@ -6,8 +6,8 @@ The TOGAPP.bin file is mapped to these structures
 from ctypes import c_float, c_uint8, c_uint16, c_uint32
 
 from save_convert.structs.marshal_structure import (
-    EndianSwapStructure,
     FillEndianSwapStructure,
+    MarshalStructure,
     OffsetField,
     assert_struct_size,
 )
@@ -16,7 +16,7 @@ from save_convert.structs.marshal_structure import (
 GRACES_F_RAW_SAVE_SIZE = 79104
 
 
-class PlayerLocationOffsetStruct(EndianSwapStructure):
+class PlayerLocationOffsetStruct(MarshalStructure):
     """Starts at offset 0x04"""
 
     _fields_ = [
@@ -37,7 +37,7 @@ class PlayerLocationOffsetStruct(EndianSwapStructure):
 assert_struct_size(PlayerLocationOffsetStruct, 0x2C)
 
 
-class GameDataStruct(EndianSwapStructure):
+class GameDataStruct(MarshalStructure):
     """Starts at offset 0x30"""
 
     _fields_ = [
@@ -58,7 +58,7 @@ class GameDataStruct(EndianSwapStructure):
 assert_struct_size(GameDataStruct, 0x34)
 
 
-class CharacterDataStats(EndianSwapStructure):
+class CharacterDataStats(MarshalStructure):
     """Starts at offset 0x84"""
 
     _fields_ = [
@@ -91,7 +91,7 @@ class CharacterDataStats(EndianSwapStructure):
 assert_struct_size(CharacterDataStats, 0x5C)
 
 
-class CharacterDataCurrEquipment(EndianSwapStructure):
+class CharacterDataCurrEquipment(MarshalStructure):
     """Starts at offset 0x108"""
 
     _fields_ = [
@@ -109,7 +109,7 @@ class CharacterDataCurrEquipment(EndianSwapStructure):
 assert_struct_size(CharacterDataCurrEquipment, 0x10)
 
 
-class CharacterDataTitle(EndianSwapStructure):
+class CharacterDataTitle(MarshalStructure):
     """Starts at offset 0x118"""
 
     _fields_ = [
@@ -124,7 +124,7 @@ class CharacterDataTitle(EndianSwapStructure):
 assert_struct_size(CharacterDataTitle, 0x8)
 
 
-class CharacterDataTitleArray(EndianSwapStructure):
+class CharacterDataTitleArray(MarshalStructure):
     """Starts at offset 0x118"""
 
     _fields_ = [
@@ -136,7 +136,7 @@ class CharacterDataTitleArray(EndianSwapStructure):
 assert_struct_size(CharacterDataTitleArray, 0x640)
 
 
-class CharacterDataArte(EndianSwapStructure):
+class CharacterDataArte(MarshalStructure):
     """Starts at offset 0x758"""
 
     _fields_ = [
@@ -153,7 +153,7 @@ class CharacterDataArte(EndianSwapStructure):
 assert_struct_size(CharacterDataArte, 0xC)
 
 
-class CharacterDataArteArray(EndianSwapStructure):
+class CharacterDataArteArray(MarshalStructure):
     """Starts at offset 0x758"""
 
     _fields_ = [
@@ -165,7 +165,7 @@ class CharacterDataArteArray(EndianSwapStructure):
 assert_struct_size(CharacterDataArteArray, 0x300)
 
 
-class CharacterDataStruct(EndianSwapStructure):
+class CharacterDataStruct(MarshalStructure):
     """Starts at offset 0x64"""
 
     _fields_ = [
@@ -192,7 +192,7 @@ class CharacterDataStruct(EndianSwapStructure):
 assert_struct_size(CharacterDataStruct, 0xBD8)
 
 
-class CharacterDataStructArray(EndianSwapStructure):
+class CharacterDataStructArray(MarshalStructure):
     """Starts at offset 0x64
     Stride between characters is 0xBD8 = 3032
     There are 10 character entries
@@ -216,7 +216,7 @@ class CharacterDataStructArray(EndianSwapStructure):
 assert_struct_size(CharacterDataStructArray, 0x7670)
 
 
-class GaldDataStruct(EndianSwapStructure):
+class GaldDataStruct(MarshalStructure):
     """Starts at offset 0x76D4"""
 
     _fields_ = [
@@ -228,7 +228,7 @@ class GaldDataStruct(EndianSwapStructure):
 assert_struct_size(GaldDataStruct, 0x4)
 
 
-class PlaytimeDataStruct(EndianSwapStructure):
+class PlaytimeDataStruct(MarshalStructure):
     """Starts at offset 0x76D8"""
 
     _fields_ = [
@@ -240,7 +240,7 @@ class PlaytimeDataStruct(EndianSwapStructure):
 assert_struct_size(PlaytimeDataStruct, 0x4)
 
 
-class ShardData(EndianSwapStructure):
+class ShardData(MarshalStructure):
     """Starts at offset 0x76DC"""
 
     _fields_ = [
@@ -254,7 +254,7 @@ class ShardData(EndianSwapStructure):
 assert_struct_size(ShardData, 0x4)
 
 
-class ShardDataArray(EndianSwapStructure):
+class ShardDataArray(MarshalStructure):
     """Starts at offset 0x76DC
     Stride between shard is 4
     There are 202 entries
@@ -269,7 +269,7 @@ class ShardDataArray(EndianSwapStructure):
 assert_struct_size(ShardDataArray, 0x328)
 
 
-class WeaponData(EndianSwapStructure):
+class WeaponData(MarshalStructure):
     """Starts at offset 0x7A04"""
 
     _fields_ = [
@@ -298,7 +298,7 @@ class WeaponData(EndianSwapStructure):
 assert_struct_size(WeaponData, 0x1A)
 
 
-class WeaponDataArray(EndianSwapStructure):
+class WeaponDataArray(MarshalStructure):
     """Starts at offset 0x7A04
     Stride between weapons is 26
     There are 202 entries
@@ -313,7 +313,7 @@ class WeaponDataArray(EndianSwapStructure):
 assert_struct_size(WeaponDataArray, 0x1484)
 
 
-class ArmorData(EndianSwapStructure):
+class ArmorData(MarshalStructure):
     """Starts at offset 0x8E88"""
 
     _fields_ = [
@@ -339,7 +339,7 @@ class ArmorData(EndianSwapStructure):
 assert_struct_size(ArmorData, 0x16)
 
 
-class ArmorDataArray(EndianSwapStructure):
+class ArmorDataArray(MarshalStructure):
     """Starts at offset 0x8E88
     Stride between armor is 22
     There are 202 entries
@@ -354,7 +354,7 @@ class ArmorDataArray(EndianSwapStructure):
 assert_struct_size(ArmorDataArray, 0x115C)
 
 
-class GemData(EndianSwapStructure):
+class GemData(MarshalStructure):
     """Starts at offset 0x9FE4"""
 
     _fields_ = [
@@ -372,7 +372,7 @@ class GemData(EndianSwapStructure):
 assert_struct_size(GemData, 0x8)
 
 
-class GemDataArray(EndianSwapStructure):
+class GemDataArray(MarshalStructure):
     """Starts at offset 0x9FE4
     Stride between gem is 8
     There are 202 entries
@@ -387,7 +387,7 @@ class GemDataArray(EndianSwapStructure):
 assert_struct_size(GemDataArray, 0x650)
 
 
-class ItemAmountStruct(EndianSwapStructure):
+class ItemAmountStruct(MarshalStructure):
     """Represents the count of an item"""
 
     _fields_ = [
@@ -399,7 +399,7 @@ class ItemAmountStruct(EndianSwapStructure):
 assert_struct_size(ItemAmountStruct, 0x1)
 
 
-class UnknownItemsArrayStruct(EndianSwapStructure):
+class UnknownItemsArrayStruct(MarshalStructure):
     """Starts at offset 0xA634"""
 
     _fields_ = [
@@ -411,7 +411,7 @@ class UnknownItemsArrayStruct(EndianSwapStructure):
 assert_struct_size(UnknownItemsArrayStruct, 0xD)
 
 
-class ConsumablesItemsArrayStruct(EndianSwapStructure):
+class ConsumablesItemsArrayStruct(MarshalStructure):
     """Starts at offset 0xA641"""
 
     _fields_ = [
@@ -458,7 +458,7 @@ class ConsumablesItemsArrayStruct(EndianSwapStructure):
 assert_struct_size(ConsumablesItemsArrayStruct, 0x24)
 
 
-class DishesArrayStruct(EndianSwapStructure):
+class DishesArrayStruct(MarshalStructure):
     """Starts at offset 0xA665"""
 
     _fields_ = [
@@ -579,7 +579,7 @@ class DishesArrayStruct(EndianSwapStructure):
 assert_struct_size(DishesArrayStruct, 0x7C)
 
 
-class MaterialsArrayStruct(EndianSwapStructure):
+class MaterialsArrayStruct(MarshalStructure):
     """Starts at offset 0xA6E1"""
 
     _fields_ = [
@@ -713,7 +713,7 @@ class MaterialsArrayStruct(EndianSwapStructure):
 assert_struct_size(MaterialsArrayStruct, 0x7B)
 
 
-class CashablesArrayStruct(EndianSwapStructure):
+class CashablesArrayStruct(MarshalStructure):
     """Starts at offset 0xA75C"""
 
     _fields_ = [
@@ -790,7 +790,7 @@ class CashablesArrayStruct(EndianSwapStructure):
 assert_struct_size(CashablesArrayStruct, 0x42)
 
 
-class IngredientsArrayStruct(EndianSwapStructure):
+class IngredientsArrayStruct(MarshalStructure):
     """Starts at offset 0xA79E"""
 
     _fields_ = [
@@ -849,10 +849,10 @@ class IngredientsArrayStruct(EndianSwapStructure):
 assert_struct_size(IngredientsArrayStruct, 0x30)
 
 
-class EquipItemsArrayStruct(EndianSwapStructure):
+class EquipItemsArrayStruct(MarshalStructure):
     """Starts at offset 0xA801"""
 
-    class WeaponsStruct(EndianSwapStructure):
+    class WeaponsStruct(MarshalStructure):
         """Starts at offset 0xA801"""
 
         _fields_ = [
@@ -988,7 +988,7 @@ class EquipItemsArrayStruct(EndianSwapStructure):
 
     assert_struct_size(WeaponsStruct, 0x90)
 
-    class ArmorsStruct(EndianSwapStructure):
+    class ArmorsStruct(MarshalStructure):
         """Starts at offset 0xA891"""
 
         _fields_ = [
@@ -1057,7 +1057,7 @@ class EquipItemsArrayStruct(EndianSwapStructure):
 
     assert_struct_size(ArmorsStruct, 0x40)
 
-    class UniquesStruct(EndianSwapStructure):
+    class UniquesStruct(MarshalStructure):
         """Starts at offset 0xA8D1"""
 
         _fields_ = [
@@ -1165,7 +1165,7 @@ class EquipItemsArrayStruct(EndianSwapStructure):
 assert_struct_size(EquipItemsArrayStruct, 0x150)
 
 
-class GemsArrayStruct(EndianSwapStructure):
+class GemsArrayStruct(MarshalStructure):
     """Starts at offset 0xA951"""
 
     _fields_ = [
@@ -1195,7 +1195,7 @@ class GemsArrayStruct(EndianSwapStructure):
 assert_struct_size(GemsArrayStruct, 0x13)
 
 
-class CharmsArrayStruct(EndianSwapStructure):
+class CharmsArrayStruct(MarshalStructure):
     """Starts at offset 0xA964"""
 
     _fields_ = [
@@ -1251,7 +1251,7 @@ class CharmsArrayStruct(EndianSwapStructure):
 assert_struct_size(CharmsArrayStruct, 0x2D)
 
 
-class ValuablesArrayStruct(EndianSwapStructure):
+class ValuablesArrayStruct(MarshalStructure):
     """Starts at offset 0xA991"""
 
     _fields_ = [
@@ -1512,7 +1512,7 @@ class ValuablesArrayStruct(EndianSwapStructure):
 assert_struct_size(ValuablesArrayStruct, 0xFF)
 
 
-class AllItemsAmountArray(EndianSwapStructure):
+class AllItemsAmountArray(MarshalStructure):
     """Starts at offset 0xA634"""
 
     _fields_ = [
@@ -1534,8 +1534,8 @@ class AllItemsAmountArray(EndianSwapStructure):
 assert_struct_size(AllItemsAmountArray, 0x45C)
 
 
-class CollectorStateDataStruct(EndianSwapStructure):
-    class CollectorBookItems(EndianSwapStructure):
+class CollectorStateDataStruct(MarshalStructure):
+    class CollectorBookItems(MarshalStructure):
         """Starts at offset 0xAABC"""
 
         _fields_ = [
@@ -1545,7 +1545,7 @@ class CollectorStateDataStruct(EndianSwapStructure):
 
     assert_struct_size(CollectorBookItems, 0x5)
 
-    class CollectorBookDishes(EndianSwapStructure):
+    class CollectorBookDishes(MarshalStructure):
         """Starts at offset 0xAAC1"""
 
         _fields_ = [
@@ -1555,7 +1555,7 @@ class CollectorStateDataStruct(EndianSwapStructure):
 
     assert_struct_size(CollectorBookDishes, 0xE)
 
-    class CollectorBookMaterials(EndianSwapStructure):
+    class CollectorBookMaterials(MarshalStructure):
         """Starts at offset 0xAAD4"""
 
         _fields_ = [
@@ -1565,7 +1565,7 @@ class CollectorStateDataStruct(EndianSwapStructure):
 
     assert_struct_size(CollectorBookMaterials, 0x24)
 
-    class CollectorBookWeapons(EndianSwapStructure):
+    class CollectorBookWeapons(MarshalStructure):
         """Starts at offset 0xAAFC"""
 
         _fields_ = [
@@ -1575,7 +1575,7 @@ class CollectorStateDataStruct(EndianSwapStructure):
 
     assert_struct_size(CollectorBookWeapons, 0x10)
 
-    class CollectorBookArmors(EndianSwapStructure):
+    class CollectorBookArmors(MarshalStructure):
         """Starts at offset 0xAB14"""
 
         _fields_ = [
@@ -1585,7 +1585,7 @@ class CollectorStateDataStruct(EndianSwapStructure):
 
     assert_struct_size(CollectorBookArmors, 0x8)
 
-    class CollectorBookUniqueEquipment(EndianSwapStructure):
+    class CollectorBookUniqueEquipment(MarshalStructure):
         """Starts at offset 0xAB1C"""
 
         _fields_ = [
@@ -1595,7 +1595,7 @@ class CollectorStateDataStruct(EndianSwapStructure):
 
     assert_struct_size(CollectorBookUniqueEquipment, 0xC)
 
-    class CollectorBookGems(EndianSwapStructure):
+    class CollectorBookGems(MarshalStructure):
         """Starts at offset 0xAB2C"""
 
         _fields_ = [
@@ -1605,7 +1605,7 @@ class CollectorStateDataStruct(EndianSwapStructure):
 
     assert_struct_size(CollectorBookGems, 0xC)
 
-    class CollectorBookValuables(EndianSwapStructure):
+    class CollectorBookValuables(MarshalStructure):
         """Starts at offset 0xAB3C"""
 
         _fields_ = [
@@ -1615,7 +1615,7 @@ class CollectorStateDataStruct(EndianSwapStructure):
 
     assert_struct_size(CollectorBookValuables, 0x20)
 
-    class UnknownBitmapAt_0xAB64(EndianSwapStructure):
+    class UnknownBitmapAt_0xAB64(MarshalStructure):
         """Starts at offset 0xAB64"""
 
         _fields_ = [
@@ -1625,7 +1625,7 @@ class CollectorStateDataStruct(EndianSwapStructure):
 
     assert_struct_size(UnknownBitmapAt_0xAB64, 0x14)
 
-    class UnknownBitmapAt_0xAB7C(EndianSwapStructure):
+    class UnknownBitmapAt_0xAB7C(MarshalStructure):
         """Starts at offset 0xAB7C"""
 
         _fields_ = [
@@ -1635,7 +1635,7 @@ class CollectorStateDataStruct(EndianSwapStructure):
 
     assert_struct_size(UnknownBitmapAt_0xAB7C, 0x4)
 
-    class UnknownBitmapAt_0xAB88(EndianSwapStructure):
+    class UnknownBitmapAt_0xAB88(MarshalStructure):
         """Starts at offset 0xAB88"""
 
         _fields_ = [
@@ -1674,7 +1674,7 @@ class CollectorStateDataStruct(EndianSwapStructure):
 assert_struct_size(CollectorStateDataStruct, 0xD8)
 
 
-class StampsReceivedStruct(EndianSwapStructure):
+class StampsReceivedStruct(MarshalStructure):
     """Starts at offset 0xABB8"""
 
     _fields_ = [
@@ -1686,7 +1686,7 @@ class StampsReceivedStruct(EndianSwapStructure):
 assert_struct_size(StampsReceivedStruct, 0x2)
 
 
-class NewItemStruct(EndianSwapStructure):
+class NewItemStruct(MarshalStructure):
     """Starts at offset 0xABBC"""
 
     _fields_ = [
@@ -1699,7 +1699,7 @@ class NewItemStruct(EndianSwapStructure):
 assert_struct_size(NewItemStruct, 0x4)
 
 
-class NewItemArray(EndianSwapStructure):
+class NewItemArray(MarshalStructure):
     """Starts at offset 0xABBE"""
 
     _fields_ = [
@@ -1711,7 +1711,7 @@ class NewItemArray(EndianSwapStructure):
 assert_struct_size(NewItemArray, 0x38)
 
 
-class ElethDataStruct(EndianSwapStructure):
+class ElethDataStruct(MarshalStructure):
     """Starts at offset 0xABF8"""
 
     _fields_ = [
@@ -1725,7 +1725,7 @@ class ElethDataStruct(EndianSwapStructure):
 assert_struct_size(ElethDataStruct, 0x24)
 
 
-class ElethMixerDataStruct(EndianSwapStructure):
+class ElethMixerDataStruct(MarshalStructure):
     """Starts at offset 0xAC1C"""
 
     _fields_ = [
@@ -1751,7 +1751,7 @@ assert_struct_size(ElethMixerDataStruct, 0x1)
 # max hit is located at 0xAC40 - 2 bytes
 
 
-class EncounterDataStruct(EndianSwapStructure):
+class EncounterDataStruct(MarshalStructure):
     """Starts at offset 0xAC20"""
 
     _fields_ = [
@@ -1763,7 +1763,7 @@ class EncounterDataStruct(EndianSwapStructure):
 assert_struct_size(EncounterDataStruct, 0x4)
 
 
-class OtherGameData(EndianSwapStructure):
+class OtherGameData(MarshalStructure):
     """Starts at offset 0xAC24"""
 
     _fields_ = [
@@ -1775,7 +1775,7 @@ class OtherGameData(EndianSwapStructure):
 assert_struct_size(OtherGameData, 0x1C)
 
 
-class MaxHitCountStruct(EndianSwapStructure):
+class MaxHitCountStruct(MarshalStructure):
     """Starts at offset 0xAC40"""
 
     _fields_ = [
@@ -1787,7 +1787,7 @@ class MaxHitCountStruct(EndianSwapStructure):
 assert_struct_size(MaxHitCountStruct, 0x2)
 
 
-class GradeShopDataStruct(EndianSwapStructure):
+class GradeShopDataStruct(MarshalStructure):
     """Starts at offset 0xAC44
     Stored as a bitmap
     """
@@ -1835,8 +1835,8 @@ class GradeShopDataStruct(EndianSwapStructure):
 assert_struct_size(GradeShopDataStruct, 0x8)
 
 
-class ShopUnknownStructArrayAt_0xAC4C(EndianSwapStructure):
-    class ShopUnknownStructAt_0xAC4C(EndianSwapStructure):
+class ShopUnknownStructArrayAt_0xAC4C(MarshalStructure):
+    class ShopUnknownStructAt_0xAC4C(MarshalStructure):
         """
         Starts at offset 0xAC4C
         ShopUnknownStructArrayAt_0xAC4C
@@ -1875,7 +1875,7 @@ class ShopUnknownStructArrayAt_0xAC4C(EndianSwapStructure):
 assert_struct_size(ShopUnknownStructArrayAt_0xAC4C, 0x208)
 
 
-class UnknownShortsAt_0xAE7C(EndianSwapStructure):
+class UnknownShortsAt_0xAE7C(MarshalStructure):
     """Starts at offset 0xAE7C"""
 
     _fields_ = [
@@ -1887,7 +1887,7 @@ class UnknownShortsAt_0xAE7C(EndianSwapStructure):
 assert_struct_size(UnknownShortsAt_0xAE7C, 0x70)
 
 
-class DiscoveriesBitfieldDataStruct(EndianSwapStructure):
+class DiscoveriesBitfieldDataStruct(MarshalStructure):
     """Starts at offset 0xAF1C"""
 
     _fields_ = [
@@ -1899,7 +1899,7 @@ class DiscoveriesBitfieldDataStruct(EndianSwapStructure):
 assert_struct_size(DiscoveriesBitfieldDataStruct, 0xC)
 
 
-class UnknownBitfieldAt_0xAF2C(EndianSwapStructure):
+class UnknownBitfieldAt_0xAF2C(MarshalStructure):
     """Starts at offset 0xAF2C"""
 
     _fields_ = [
@@ -1911,7 +1911,7 @@ class UnknownBitfieldAt_0xAF2C(EndianSwapStructure):
 assert_struct_size(UnknownBitfieldAt_0xAF2C, 0x10)
 
 
-class UnknownBitfieldAt_0xAF4C(EndianSwapStructure):
+class UnknownBitfieldAt_0xAF4C(MarshalStructure):
     """Starts at offset 0xAF4C"""
 
     _fields_ = [
@@ -1923,10 +1923,10 @@ class UnknownBitfieldAt_0xAF4C(EndianSwapStructure):
 assert_struct_size(UnknownBitfieldAt_0xAF4C, 0x8)
 
 
-class EnemyDataArray(EndianSwapStructure):
+class EnemyDataArray(MarshalStructure):
     """Starts at offset 0xAF54"""
 
-    class EnemyDataBits(EndianSwapStructure):
+    class EnemyDataBits(MarshalStructure):
         """Bitfield for enemy data"""
 
         _fields_ = [
@@ -1949,7 +1949,7 @@ class EnemyDataArray(EndianSwapStructure):
 assert_struct_size(EnemyDataArray, 0x14A)
 
 
-class UnknownShortsAt_0xB0D8(EndianSwapStructure):
+class UnknownShortsAt_0xB0D8(MarshalStructure):
     """Starts at offset 0xB0D8"""
 
     _fields_ = [
@@ -1961,7 +1961,7 @@ class UnknownShortsAt_0xB0D8(EndianSwapStructure):
 assert_struct_size(UnknownShortsAt_0xB0D8, 0x290)
 
 
-class MoreUnknownShortsAt_0xB3D8(EndianSwapStructure):
+class MoreUnknownShortsAt_0xB3D8(MarshalStructure):
     """Starts at offset 0xB3D8"""
 
     _fields_ = [
@@ -1973,10 +1973,10 @@ class MoreUnknownShortsAt_0xB3D8(EndianSwapStructure):
 assert_struct_size(MoreUnknownShortsAt_0xB3D8, 0x290)
 
 
-class UnknownStructArrayAt_0xB8D0(EndianSwapStructure):
+class UnknownStructArrayAt_0xB8D0(MarshalStructure):
     """Starts at offset 0xB8D0"""
 
-    class UnknownStructAt_0xB8D0(EndianSwapStructure):
+    class UnknownStructAt_0xB8D0(MarshalStructure):
         _fields_ = [
             ("unknown_int1", c_uint32),  # +0x0
             ("unknown_value", c_uint8 * 2),  # +0x4
@@ -1993,7 +1993,7 @@ class UnknownStructArrayAt_0xB8D0(EndianSwapStructure):
 assert_struct_size(UnknownStructArrayAt_0xB8D0, 0xC0)
 
 
-class RecordDataUnknownStruct(EndianSwapStructure):
+class RecordDataUnknownStruct(MarshalStructure):
     """Starts at offset 0xB994"""
 
     _fields_ = [
@@ -2007,7 +2007,7 @@ class RecordDataUnknownStruct(EndianSwapStructure):
 assert_struct_size(RecordDataUnknownStruct, 0x1C)
 
 
-class RecordDataStruct(EndianSwapStructure):
+class RecordDataStruct(MarshalStructure):
     """Starts at offset 0xB9B0"""
 
     _fields_ = [
@@ -2032,7 +2032,7 @@ class RecordDataStruct(EndianSwapStructure):
 assert_struct_size(RecordDataStruct, 0x3C)
 
 
-class BattlePlaytimeGameDataStructAt_0xBB70(EndianSwapStructure):
+class BattlePlaytimeGameDataStructAt_0xBB70(MarshalStructure):
     """Starts at offset 0xBB70"""
 
     _fields_ = [
@@ -2052,7 +2052,7 @@ class BattlePlaytimeGameDataStructAt_0xBB70(EndianSwapStructure):
 assert_struct_size(BattlePlaytimeGameDataStructAt_0xBB70, 0x30)
 
 
-class UnknownIntAt_0xBBB0(EndianSwapStructure):
+class UnknownIntAt_0xBBB0(MarshalStructure):
     """Starts at offset 0xBBB0"""
 
     _fields_ = [
@@ -2064,7 +2064,7 @@ class UnknownIntAt_0xBBB0(EndianSwapStructure):
 assert_struct_size(UnknownIntAt_0xBBB0, 0x4)
 
 
-class UnknownStructAt_0xBBBC(EndianSwapStructure):
+class UnknownStructAt_0xBBBC(MarshalStructure):
     """Starts at offset 0xBBBC"""
 
     _fields_ = [
@@ -2078,7 +2078,7 @@ class UnknownStructAt_0xBBBC(EndianSwapStructure):
 assert_struct_size(UnknownStructAt_0xBBBC, 0x20)
 
 
-class UnknownIntsAt_0xBC1C(EndianSwapStructure):
+class UnknownIntsAt_0xBC1C(MarshalStructure):
     """Starts at offset 0xBC1C"""
 
     _fields_ = [
@@ -2090,7 +2090,7 @@ class UnknownIntsAt_0xBC1C(EndianSwapStructure):
 assert_struct_size(UnknownIntsAt_0xBC1C, 0x20)
 
 
-class UnknownIntsAt_0xBC60(EndianSwapStructure):
+class UnknownIntsAt_0xBC60(MarshalStructure):
     """Starts at offset 0xBC60"""
 
     _fields_ = [
@@ -2102,7 +2102,7 @@ class UnknownIntsAt_0xBC60(EndianSwapStructure):
 assert_struct_size(UnknownIntsAt_0xBC60, 0x40)
 
 
-class UnknownShortsAt_0xBCB0(EndianSwapStructure):
+class UnknownShortsAt_0xBCB0(MarshalStructure):
     """Starts at offset 0xBCB0"""
 
     _fields_ = [
@@ -2115,7 +2115,7 @@ class UnknownShortsAt_0xBCB0(EndianSwapStructure):
 assert_struct_size(UnknownShortsAt_0xBCB0, 0x1C)
 
 
-class UnknownIntsAt_0xBCCC(EndianSwapStructure):
+class UnknownIntsAt_0xBCCC(MarshalStructure):
     """Starts at offset 0xBCCC"""
 
     _fields_ = [
@@ -2127,7 +2127,7 @@ class UnknownIntsAt_0xBCCC(EndianSwapStructure):
 assert_struct_size(UnknownIntsAt_0xBCCC, 0x28)
 
 
-class DLCRedeemedStateStruct(EndianSwapStructure):
+class DLCRedeemedStateStruct(MarshalStructure):
     """Starts at offset 0xBD40"""
 
     _fields_ = [
@@ -2139,7 +2139,7 @@ class DLCRedeemedStateStruct(EndianSwapStructure):
 assert_struct_size(DLCRedeemedStateStruct, 0x190)
 
 
-class UnknownIntsAt_0xC1F0(EndianSwapStructure):
+class UnknownIntsAt_0xC1F0(MarshalStructure):
     """Starts at offset 0xC1F0"""
 
     _fields_ = [
@@ -2151,7 +2151,7 @@ class UnknownIntsAt_0xC1F0(EndianSwapStructure):
 assert_struct_size(UnknownIntsAt_0xC1F0, 0x104)
 
 
-class UnknownFloatsAt_0xC438(EndianSwapStructure):
+class UnknownFloatsAt_0xC438(MarshalStructure):
     """Starts at offset 0xC438"""
 
     _fields_ = [
@@ -2163,7 +2163,7 @@ class UnknownFloatsAt_0xC438(EndianSwapStructure):
 assert_struct_size(UnknownFloatsAt_0xC438, 0x10)
 
 
-class SideQuestData(EndianSwapStructure):
+class SideQuestData(MarshalStructure):
     """Starts at offset 0xC460"""
 
     _fields_ = [
@@ -2175,7 +2175,7 @@ class SideQuestData(EndianSwapStructure):
 assert_struct_size(SideQuestData, 0x20)
 
 
-class UnknownBitmapAt0xC4D4(EndianSwapStructure):
+class UnknownBitmapAt0xC4D4(MarshalStructure):
     """Starts at offset 0xC4D4"""
 
     _fields_ = [
@@ -2187,7 +2187,7 @@ class UnknownBitmapAt0xC4D4(EndianSwapStructure):
 assert_struct_size(UnknownBitmapAt0xC4D4, 0xC)
 
 
-class UnknownIntAt_0xC5E4(EndianSwapStructure):
+class UnknownIntAt_0xC5E4(MarshalStructure):
     """Starts at offset 0xC5E4"""
 
     _fields_ = [
@@ -2199,7 +2199,7 @@ class UnknownIntAt_0xC5E4(EndianSwapStructure):
 assert_struct_size(UnknownIntAt_0xC5E4, 0x4)
 
 
-class UnknownIntAt_0xC5EC(EndianSwapStructure):
+class UnknownIntAt_0xC5EC(MarshalStructure):
     """Starts at offset 0xC5EC"""
 
     _fields_ = [
@@ -2211,7 +2211,7 @@ class UnknownIntAt_0xC5EC(EndianSwapStructure):
 assert_struct_size(UnknownIntAt_0xC5EC, 0x4)
 
 
-class UnknownIntAt_0x10500(EndianSwapStructure):
+class UnknownIntAt_0x10500(MarshalStructure):
     """Starts at offset 0x10500"""
 
     _fields_ = [
@@ -2223,7 +2223,7 @@ class UnknownIntAt_0x10500(EndianSwapStructure):
 assert_struct_size(UnknownIntAt_0x10500, 0x4)
 
 
-class UnknownIntAt_0x1057C(EndianSwapStructure):
+class UnknownIntAt_0x1057C(MarshalStructure):
     """Starts at offset 0x1057C"""
 
     _fields_ = [
@@ -2235,7 +2235,7 @@ class UnknownIntAt_0x1057C(EndianSwapStructure):
 assert_struct_size(UnknownIntAt_0x1057C, 0x4)
 
 
-class UnknownFloatAt_0x105C4(EndianSwapStructure):
+class UnknownFloatAt_0x105C4(MarshalStructure):
     """Starts at offset 0x105C4"""
 
     _fields_ = [
@@ -2247,7 +2247,7 @@ class UnknownFloatAt_0x105C4(EndianSwapStructure):
 assert_struct_size(UnknownFloatAt_0x105C4, 0x4)
 
 
-class UnknownIntAt_0x1062C(EndianSwapStructure):
+class UnknownIntAt_0x1062C(MarshalStructure):
     """Starts at offset 0x1062C"""
 
     _fields_ = [
@@ -2259,7 +2259,7 @@ class UnknownIntAt_0x1062C(EndianSwapStructure):
 assert_struct_size(UnknownIntAt_0x1062C, 0x4)
 
 
-class TalesOfGracesFSSaveStruct(FillEndianSwapStructure):  # type: ignore[metaclass]
+class TalesOfGracesFSaveStruct(FillEndianSwapStructure):  # type: ignore[metaclass]
     """
     Structure providing a mapping for the entire Tales of Graces f TOGBIN.app
     raw save file
@@ -2318,4 +2318,4 @@ class TalesOfGracesFSSaveStruct(FillEndianSwapStructure):  # type: ignore[metacl
     ]
 
 
-assert_struct_size(TalesOfGracesFSSaveStruct, GRACES_F_RAW_SAVE_SIZE)
+assert_struct_size(TalesOfGracesFSaveStruct, GRACES_F_RAW_SAVE_SIZE)

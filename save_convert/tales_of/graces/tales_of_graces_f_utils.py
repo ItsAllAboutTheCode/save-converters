@@ -73,15 +73,14 @@ from save_convert.tales_of.graces.tales_of_graces_f_big_data import (
     DEFAULT_ICON_PNG_CAPTURE_SIZE,
     DEFAULT_NATIVE_SYS_PARAM_BASE64,
 )
-from save_convert.tales_of.graces.tales_of_graces_f_structs import GRACES_F_RAW_SAVE_SIZE, TalesOfGracesFSSaveStruct
+from save_convert.tales_of.graces.tales_of_graces_f_structs import GRACES_F_RAW_SAVE_SIZE, TalesOfGracesFSaveStruct
+from save_convert.tales_of.tales_of_utils import COMPACT_JSON_SEPARATORS
 
 SCRIPT_DIR: Path = Path(__file__).parent.resolve()
 
 LOGGER = logging.getLogger("graces_save_converter_utils")
 LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 LOGGER.setLevel(logging.INFO)
-
-COMPACT_JSON_SEPARATORS = (",", ":")
 
 # Formats which supports encryption/decryption
 # NOTE: PS3 save files are always decrypted
@@ -1733,7 +1732,7 @@ class GracesFBinSaveToYamlConvert(BinSaveToYamlConvert):
     """
 
     def __init__(self, args: argparse.Namespace):
-        super().__init__(args, struct_type=TalesOfGracesFSSaveStruct)
+        super().__init__(args, struct_type=TalesOfGracesFSaveStruct)
 
     @override
     def _pre_transform(self) -> bool:
@@ -1754,7 +1753,7 @@ class GracesFYamlToBinSaveConvert(YamlToBinSaveConvert):
     """
 
     def __init__(self, args: argparse.Namespace):
-        super().__init__(args, struct_type=TalesOfGracesFSSaveStruct)
+        super().__init__(args, struct_type=TalesOfGracesFSaveStruct)
 
     @override
     def _pre_transform(self) -> bool:

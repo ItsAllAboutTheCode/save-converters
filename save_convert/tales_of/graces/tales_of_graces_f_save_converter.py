@@ -34,9 +34,8 @@ from save_convert.save_converter_base import (
     SaveFormat,
 )
 from save_convert.structs.patch_struct import PatchStructEndianSwap
-from save_convert.tales_of.graces.tales_of_graces_f_structs import TalesOfGracesFSSaveStruct
+from save_convert.tales_of.graces.tales_of_graces_f_structs import TalesOfGracesFSaveStruct
 from save_convert.tales_of.graces.tales_of_graces_f_utils import (
-    COMPACT_JSON_SEPARATORS,
     DEFAULT_ICON0_PNG_FILENAME,
     DEFAULT_NOBLE_SAVE_BIN_FILENAME,
     DEFAULT_NOBLE_SYSTEM_SAVE_BIN_FILENAME,
@@ -65,6 +64,7 @@ from save_convert.tales_of.graces.tales_of_graces_f_utils import (
     add_system_save_encrypt_arguments,
     add_yaml_to_binary_arguments,
 )
+from save_convert.tales_of.tales_of_utils import COMPACT_JSON_SEPARATORS
 
 SCRIPT_DIR: Path = Path(__file__).parent.resolve()
 
@@ -284,24 +284,20 @@ class SaveEncryptGracesF(SaveCryptBase):
 
 class SaveConvertGracesFEncrypted(SaveConvertBase):
     """
-    Converts an encrypted savelist file to a list of savelist entries
+    Converts between Tales of Graces f(PS3) and Tales of Graces f Remastered saves
     The result is a file of the encrypted save data
     """
 
-    _decrypted_save_contents: SaveContents
+    _save_contents: SaveContents
     _debug_ps3_conversion: bool
 
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
-        self._decrypted_save_contents = SaveContents()
+        self._save_contents = SaveContents()
 
         # When set, a decrypted dump of the TOGAPP.bin afte converting to/from PS3 Big-Endian
         # to other platforms Little-Endian
-        self._debug_ps3_conversion = args.debug
-
-        output_path: Path | None = getattr(args, "output", None)
-        if not output_path:
-            self._output_path: Path = self._output_path.with_suffix(self._output_path.suffix + ".enc")
+        self._debug_ps3_conversion = getattr(args, "debug", False)
 
     @override
     def _pre_transform(self) -> bool:
@@ -316,26 +312,24 @@ class SaveConvertGracesFEncrypted(SaveConvertBase):
             return self._output_io.write(self._input_data) == len(self._input_data)
 
         # Decrypt byte buffer into SaveContents structure
-        if not SaveContents.from_encrypt_bytes(
-            self._input_data, self._decrypted_save_contents, self._convert_format.source
-        ):
+        if not SaveContents.from_encrypt_bytes(self._input_data, self._save_contents, self._convert_format.source):
             LOGGER.error(f"Failed to decrypt save file {self._input_path}")
             return False
 
         # Apply the save patch for conversion to/from PS3 data
         converted_data = self.apply_patch(
-            self._decrypted_save_contents.raw_save_binary_buffer, self._patch_table, self._convert_format
+            self._save_contents.raw_save_binary_buffer, self._patch_table, self._convert_format
         )
         if not converted_data:
             LOGGER.error(f"Failed to convert data save data using the convert format of {self._convert_format}")
             return False
 
         # Update the raw save binary and JSON values
-        self._decrypted_save_contents.raw_save_binary_buffer = converted_data
+        self._save_contents.raw_save_binary_buffer = converted_data
 
         # Re-encrypt SaveContents structure to byte buffer
         encrypted_buffer = bytearray()
-        if not self._decrypted_save_contents.to_encrypt_bytes(encrypted_buffer, self._convert_format.target):
+        if not self._save_contents.to_encrypt_bytes(encrypted_buffer, self._convert_format.target):
             LOGGER.error(f"Failed to re-encrypt save data from file {self._input_path} after conversion")
             return False
 
@@ -367,7 +361,7 @@ class SaveConvertGracesFEncrypted(SaveConvertBase):
         new_patch_table.convert_format_to_patch_set[PS3_TO_PC_CONVERT_FORMAT] = PatchSet()
         new_patch_table.convert_format_to_patch_set[PS3_TO_PC_CONVERT_FORMAT].add_patch_entry(
             PatchStructEndianSwap(
-                target_offset=0, source_offset=0, struct_type=TalesOfGracesFSSaveStruct, byteorder="big"
+                target_offset=0, source_offset=0, struct_type=TalesOfGracesFSaveStruct, byteorder="big"
             )
         )
 
