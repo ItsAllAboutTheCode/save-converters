@@ -5,7 +5,9 @@ Contains utility methods and constants for manipulating Tales of Xillia save dat
 import argparse
 import json
 import logging
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, override
 
@@ -14,37 +16,54 @@ from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Util.Padding import pad, unpad
 from save_convert.save_converter_base import (
     NSW_TO_PC_CONVERT_FORMAT,
+    NSW_TO_PS3_CONVERT_FORMAT,
     NSW_TO_PS4_CONVERT_FORMAT,
     NSW_TO_PS5_CONVERT_FORMAT,
     NSW_TO_XBOXONE_CONVERT_FORMAT,
     NSW_TO_XBOXSERIESX_CONVERT_FORMAT,
     PC_TO_NSW_CONVERT_FORMAT,
+    PC_TO_PS3_CONVERT_FORMAT,
     PC_TO_PS4_CONVERT_FORMAT,
     PC_TO_PS5_CONVERT_FORMAT,
     PC_TO_XBOXONE_CONVERT_FORMAT,
     PC_TO_XBOXSERIESX_CONVERT_FORMAT,
+    PS3_TO_NSW_CONVERT_FORMAT,
+    PS3_TO_PC_CONVERT_FORMAT,
+    PS3_TO_PS4_CONVERT_FORMAT,
+    PS3_TO_PS5_CONVERT_FORMAT,
+    PS3_TO_XBOXONE_CONVERT_FORMAT,
+    PS3_TO_XBOXSERIESX_CONVERT_FORMAT,
     PS4_TO_NSW_CONVERT_FORMAT,
     PS4_TO_PC_CONVERT_FORMAT,
+    PS4_TO_PS3_CONVERT_FORMAT,
     PS4_TO_PS5_CONVERT_FORMAT,
     PS4_TO_XBOXONE_CONVERT_FORMAT,
     PS4_TO_XBOXSERIESX_CONVERT_FORMAT,
     PS5_TO_NSW_CONVERT_FORMAT,
     PS5_TO_PC_CONVERT_FORMAT,
+    PS5_TO_PS3_CONVERT_FORMAT,
     PS5_TO_PS4_CONVERT_FORMAT,
     PS5_TO_XBOXONE_CONVERT_FORMAT,
     PS5_TO_XBOXSERIESX_CONVERT_FORMAT,
     XBOXONE_TO_NSW_CONVERT_FORMAT,
     XBOXONE_TO_PC_CONVERT_FORMAT,
+    XBOXONE_TO_PS3_CONVERT_FORMAT,
     XBOXONE_TO_PS4_CONVERT_FORMAT,
     XBOXONE_TO_PS5_CONVERT_FORMAT,
     XBOXONE_TO_XBOXSERIESX_CONVERT_FORMAT,
     XBOXSERIESX_TO_NSW_CONVERT_FORMAT,
     XBOXSERIESX_TO_PC_CONVERT_FORMAT,
+    XBOXSERIESX_TO_PS3_CONVERT_FORMAT,
     XBOXSERIESX_TO_PS4_CONVERT_FORMAT,
     XBOXSERIESX_TO_PS5_CONVERT_FORMAT,
     XBOXSERIESX_TO_XBOXONE_CONVERT_FORMAT,
     ConvertFormat,
     SaveFormat,
+)
+from save_convert.tales_of.tales_of_utils import COMPACT_JSON_SEPARATORS
+from save_convert.tales_of.xillia.tales_of_xillia_dicts import (
+    XilliaRemasteredSaveDict,
+    default_remastered_save_dict,
 )
 
 SCRIPT_DIR: Path = Path(__file__).parent.resolve()
@@ -52,8 +71,6 @@ SCRIPT_DIR: Path = Path(__file__).parent.resolve()
 LOGGER = logging.getLogger("xillia_save_converter_utils")
 LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 LOGGER.setLevel(logging.INFO)
-
-COMPACT_JSON_SEPARATORS = (",", ":")
 
 # Formats which supports encryption/decryption
 SUPPORTED_CRYPT_SAVE_FORMATS: list[SaveFormat] = [
@@ -66,35 +83,47 @@ SUPPORTED_CRYPT_SAVE_FORMATS: list[SaveFormat] = [
 ]
 
 SUPPORTED_CONVERT_FORMATS: list[ConvertFormat] = [
+    PS3_TO_PS4_CONVERT_FORMAT,
+    PS3_TO_PS5_CONVERT_FORMAT,
+    PS3_TO_PC_CONVERT_FORMAT,
+    PS3_TO_NSW_CONVERT_FORMAT,
+    PS3_TO_XBOXONE_CONVERT_FORMAT,
+    PS3_TO_XBOXSERIESX_CONVERT_FORMAT,
     PC_TO_NSW_CONVERT_FORMAT,
     PC_TO_PS5_CONVERT_FORMAT,
     PC_TO_PS4_CONVERT_FORMAT,
+    PC_TO_PS3_CONVERT_FORMAT,
     PC_TO_XBOXONE_CONVERT_FORMAT,
     PC_TO_XBOXSERIESX_CONVERT_FORMAT,
     PS5_TO_NSW_CONVERT_FORMAT,
     PS5_TO_PC_CONVERT_FORMAT,
     PS5_TO_PS4_CONVERT_FORMAT,
+    PS5_TO_PS3_CONVERT_FORMAT,
     PS5_TO_XBOXONE_CONVERT_FORMAT,
     PS5_TO_XBOXSERIESX_CONVERT_FORMAT,
     PS4_TO_NSW_CONVERT_FORMAT,
     PS4_TO_PC_CONVERT_FORMAT,
     PS4_TO_PS5_CONVERT_FORMAT,
+    PS4_TO_PS3_CONVERT_FORMAT,
     PS4_TO_XBOXONE_CONVERT_FORMAT,
     PS4_TO_XBOXSERIESX_CONVERT_FORMAT,
     NSW_TO_PC_CONVERT_FORMAT,
     NSW_TO_PS5_CONVERT_FORMAT,
     NSW_TO_PS4_CONVERT_FORMAT,
+    NSW_TO_PS3_CONVERT_FORMAT,
     NSW_TO_XBOXONE_CONVERT_FORMAT,
     NSW_TO_XBOXSERIESX_CONVERT_FORMAT,
     XBOXONE_TO_NSW_CONVERT_FORMAT,
     XBOXONE_TO_PC_CONVERT_FORMAT,
     XBOXONE_TO_PS5_CONVERT_FORMAT,
     XBOXONE_TO_PS4_CONVERT_FORMAT,
+    XBOXONE_TO_PS3_CONVERT_FORMAT,
     XBOXONE_TO_XBOXSERIESX_CONVERT_FORMAT,
     XBOXSERIESX_TO_NSW_CONVERT_FORMAT,
     XBOXSERIESX_TO_PC_CONVERT_FORMAT,
     XBOXSERIESX_TO_PS5_CONVERT_FORMAT,
     XBOXSERIESX_TO_PS4_CONVERT_FORMAT,
+    XBOXSERIESX_TO_PS3_CONVERT_FORMAT,
     XBOXSERIESX_TO_XBOXONE_CONVERT_FORMAT,
 ]
 
@@ -120,22 +149,13 @@ XILLIA_AES_SAVE_KEY = XILLIA_GENERATED_KEYS[:16]
 XILLIA_AES_SAVE_IV = XILLIA_GENERATED_KEYS[16:]
 
 
-RemasteredSave = dict[str, Any]
-# class RemasteredSave(TypedDict):
-# """Dictionary of the complete remastered save data"""
-
-# mSaveDataType: int
-# mVersion: int
-# mSaveBlockData: list[RemasteredSaveBlock]
-
-
 class SaveContents:
     """
     Stores the decrypted JSON contents of the Tales of Xillia Remastered save data
     which contain the complete save data (unlike Tales of Graces f which wraps the original PS3 save format)
     """
 
-    save_json_dict: RemasteredSave
+    save_json_dict: XilliaRemasteredSaveDict
 
     def __init__(
         self,
@@ -199,10 +219,10 @@ class SaveContents:
         return True
 
     def remastered_save_default(self) -> None:
-        self.save_json_dict = RemasteredSave()
+        self.save_json_dict = default_remastered_save_dict()
 
 
-## Save file read methods
+### Save file read methods
 def read_json_save(
     file_path: Path,
     decrypted_save_contents: SaveContents,
@@ -225,6 +245,47 @@ def read_json_save(
             LOGGER.error(f"Failed to decode byte data into utf-8 {file_path}: {dec_err}")
             return False
     return True
+
+
+### Debug dump methods
+def dump_all_save_block_json_to_directory(save_contents: SaveContents, dump_output_dir: Path):
+    """
+    Dumps SaveDataN.data Save Block JSON fields to a directory
+    """
+    # As this code path is called when the BundleData.sav is decrypted as well
+    # check that the save dictionary has a mSaveBlockData key
+    if "mSaveBlockData" not in save_contents.save_json_dict:
+        return
+
+    files_to_move: list[Path] = []
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        for save_block_entry in save_contents.save_json_dict["mSaveBlockData"]:
+            save_block_key = save_block_entry["Key"]
+            save_block_data = save_block_entry["Value"]
+            if not save_block_key or not save_block_data:
+                continue
+            tmp_save_block_path = tmp_path / f"{save_block_key}.json"
+            with tmp_save_block_path.open("wb") as outfile:
+                # pretty print JSON
+                try:
+                    save_block_dict = json.loads(save_block_data)
+                except json.JSONDecodeError as err:
+                    LOGGER.warning(f"Failed to decode save block '{save_block_key}' data to JSON: {err}")
+                    continue
+                dump_bytes = json.dumps(save_block_dict, indent=2, separators=None).encode("utf-8")
+                if outfile.write(dump_bytes) != len(dump_bytes):
+                    LOGGER.warning(f"Failed to write '{save_block_key}' {len(dump_bytes)} to file")
+                    raise IOError(f"Failed to write {len(dump_bytes)} bytes to dump file: {tmp_save_block_path}")
+                # Dump successful, append to the list of files to move to dump directory
+                files_to_move.append(tmp_save_block_path)
+
+        # Create output directory if it doesn't exist
+        dump_output_dir.mkdir(parents=True, exist_ok=True)
+        filepaths_to_move = [(tmp_path, dump_output_dir / tmp_path.name) for tmp_path in files_to_move]
+        for src_path, dst_path in filepaths_to_move:
+            if not shutil.move(src_path, dst_path):
+                LOGGER.warning(f"Failed to move dump file '{src_path}' to {dst_path}")
 
 
 ### Start of argument parser setup
@@ -283,9 +344,8 @@ def add_convert_arguments(parser: argparse.ArgumentParser) -> None:
         "-d",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="If set, outputs the binary TOGAPP.bin file when converting to/from PS3."
-        + "This can be used to check if the conversion is correctly endian swapping the data between PS3"
-        + " and PC/PS4/etc... Outputs a file of <output-file-path>.debug",
+        help="If set, outputs the decrypted JSON file when converting from PS3 to other platforms."
+        + " Outputs a file of <output-file-path>.debug",
     )
 
 
@@ -316,6 +376,14 @@ def add_decrypt_arguments(parser: argparse.ArgumentParser) -> None:
         "-o",
         type=Path,
         help="Output path to store decrypted save. Defaults to <input-file-path>.<target-format>" + " if not specified",
+    )
+    _ = parser.add_argument(
+        "--dump-save-block-data",
+        "-d",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help='If set, dump the "mSaveBlockData" string entries as JSON files.'
+        + "The files will be output a folder of <output-file-path>.save-block-data",
     )
 
 
