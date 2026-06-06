@@ -34,6 +34,19 @@ def align_up(value: int, alignment: int) -> int:
     return (value + alignment - 1) & ~(alignment - 1)
 
 
+def align_up_to_power_of_2(value: int) -> int:
+    """Align value up to the nearest power of 2"""
+    # If the value <=2 it is already aligned
+    if value <= 2:
+        return value
+
+    high_bit = 0
+    while value > 0:
+        high_bit += 1
+        value >>= 1
+    return 2**high_bit
+
+
 @dataclass(order=True)
 class Range:
     """Represents a range offsets within a file.
@@ -1158,12 +1171,11 @@ class BinSaveToYamlConvert(SaveTransformBase):
         """
         Convert binary to save
         """
-        struct_inst = self._struct_type()
-        result = struct_inst.from_bytes(memoryview(self._input_data), struct_inst, self._byteorder)
-        if not result:
+        result = self._struct_type.from_bytes(memoryview(self._input_data), self._struct_type, self._byteorder)
+        if not result or not result.value:
             return False
 
-        to_yaml_result = struct_inst.to_yaml(self._with_comments)
+        to_yaml_result = result.value.to_yaml(add_field_comments=self._with_comments)
         if not to_yaml_result:
             return False
 
@@ -1226,9 +1238,8 @@ class YamlToBinSaveConvert(SaveTransformBase):
 
         struct_inst = result.value
 
-        output_byte_buffer = bytearray()
-        to_bytes_result = struct_inst.to_bytes(output_byte_buffer, self._byteorder)
+        to_bytes_result = struct_inst.to_bytes(self._byteorder)
         if not to_bytes_result:
             return False
 
-        return self._output_io.write(output_byte_buffer) == len(output_byte_buffer)
+        return self._output_io.write(to_bytes_result.value) == len(to_bytes_result.value)

@@ -18,7 +18,7 @@ from save_convert.save_converter_base import (
     PatchOperationState,
     Range,
 )
-from save_convert.structs.marshal_structure import ByteorderLiteral, EndianSwapStructure, OffsetField
+from save_convert.structs.marshal_structure import ByteorderLiteral, MarshalStructure, OffsetField
 
 LOGGER = logging.getLogger("patch_struct")
 LOGGER.setLevel(logging.INFO)
@@ -44,10 +44,10 @@ class PatchStructEndianSwap(PatchBase):
         self,
         target_offset: int,
         source_offset: int,
-        struct_type: type[EndianSwapStructure],
+        struct_type: type[MarshalStructure],
         byteorder: ByteorderLiteral,
     ) -> None:
-        self._struct_type: type[EndianSwapStructure] = struct_type
+        self._struct_type: type[MarshalStructure] = struct_type
         self._byteorder: ByteorderLiteral = byteorder
         super().__init__(target_offset, Range(source_offset, source_offset + sizeof(self._struct_type)))
 
@@ -70,10 +70,12 @@ class PatchStructEndianSwap(PatchBase):
                 patch_complete=PatchOperationState.Skip,
             )
 
-        struct_inst: EndianSwapStructure = self._struct_type()
-        if not struct_inst.from_bytes(
-            memoryview(source_data)[source_offset : self._source_range.end], struct_inst, byteorder=self._byteorder
-        ):
+        struct_inst_result = self._struct_type.from_bytes(
+            memoryview(source_data)[source_offset : self._source_range.end],
+            self._struct_type,
+            byteorder=self._byteorder,
+        )
+        if not struct_inst_result or not struct_inst_result.value:
             # Could not load struct from bytes, so the patch operation has failed
             return PatchOperationResult(
                 target_data=b"",
@@ -82,9 +84,9 @@ class PatchStructEndianSwap(PatchBase):
                 patch_complete=PatchOperationState.Skip,
             )
 
-        output_bytes = bytearray()
         inverted_byteorder: ByteorderLiteral = "little" if self._byteorder == "big" else "big"
-        if not struct_inst.to_bytes(output_bytes, byteorder=inverted_byteorder):
+        to_bytes_result = struct_inst_result.value.to_bytes(byteorder=inverted_byteorder)
+        if not to_bytes_result:
             # Converting to bytes has failed, so skip the patch operation
             return PatchOperationResult(
                 target_data=b"",
@@ -94,7 +96,7 @@ class PatchStructEndianSwap(PatchBase):
             )
 
         return PatchOperationResult(
-            target_data=bytes(output_bytes),
+            target_data=to_bytes_result.value,
             target_write_offset=self._target_offset,
             new_source_offset=self._source_range.end,
             patch_complete=PatchOperationState.Complete,
