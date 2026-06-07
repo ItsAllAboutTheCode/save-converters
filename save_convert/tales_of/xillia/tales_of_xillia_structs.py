@@ -137,26 +137,25 @@ SAVE_SECTION_TO_CLASS_TABLE = {
 }
 
 
-class XilliaSaveSectionEntry(MarshalStructure):
-    _fields_ = [
-        ("save_section_key_offset", c_uint32),
-        ("save_section_data_offset", c_uint32),
-        ("save_section_data_size", c_uint32),
-        ("padding", c_uint32),
+class XilliaSaveSectionEntry(FillEndianSwapStructure):  # type: ignore[metaclass]
+    _size_ = 0x10
+    _offset_fields_ = [
+        OffsetField(0x0, ("save_section_key_offset", c_uint32)),
+        OffsetField(0x4, ("save_section_data_offset", c_uint32)),
+        OffsetField(0x8, ("save_section_data_size", c_uint32)),
     ]
 
 
 assert_struct_size(XilliaSaveSectionEntry, 0x10)
 
 
-class XilliaSaveSectionHeader(MarshalStructure):
-    _fields_ = [
-        ("mVersion", c_uint16),
-        ("mSaveBlockCount", c_uint16),
-        ("mSaveFileTotalSize", c_uint32),
-        ("mSaveDataType", c_uint8),
-        ("__padding_bytes", c_uint8 * 3),
-        ("__padding_int__", c_uint32),
+class XilliaSaveSectionHeader(FillEndianSwapStructure):  # type: ignore[metaclass]
+    _size_ = 0x10
+    _offset_fields_ = [
+        OffsetField(0x0, ("mVersion", c_uint16)),
+        OffsetField(0x2, ("mSaveBlockCount", c_uint16)),
+        OffsetField(0x4, ("mSaveFileTotalSize", c_uint32)),
+        OffsetField(0x8, ("mSaveDataType", c_uint8)),
     ]
 
     def __init__(self):
@@ -197,7 +196,7 @@ class XilliaSaveStruct(FillEndianSwapStructure):  # type: ignore[metaclass]
     _size_ = XILLIA_PS3_SAVE_SIZE
     _offset_fields_ = [
         OffsetField(0x0, ("Header", XilliaSaveSectionHeader)),
-        OffsetField(0x10, ("SaveSectionLookupTable", XilliaSaveSectionEntry * XILLIA_PS3_SAVE_SECTION_ENTRY_COUNT)),
+        OffsetField(0x10, ("SaveSectionLookupTable", XilliaSaveSectionEntry * XILLIA_PS3_SAVE_SECTION_ENTRY_COUNT)),  # type: ignore[arg-type, operator]
         OffsetField(SAVE_SECTIONS_TUPLE[0].data_offset, ("PARTY_PROFILE_SAVE_DATA", PARTY_PROFILE_SAVE_DATA)),
         OffsetField(SAVE_SECTIONS_TUPLE[1].data_offset, ("ChangeMap", ChangeMap)),
         OffsetField(SAVE_SECTIONS_TUPLE[2].data_offset, ("Scenario", Scenario)),
