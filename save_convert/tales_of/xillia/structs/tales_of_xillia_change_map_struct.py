@@ -5,10 +5,10 @@ List of structures mapping to raw binary save file for Tales of Xillia
 from ctypes import c_char
 from typing import cast, override
 
+from save_convert.structs.marshal_dict_base import ToDictResult
+from save_convert.structs.marshal_struct_base import assert_struct_size
 from save_convert.structs.marshal_structure import (
     MarshalStructure,
-    ToDictResult,
-    assert_struct_size,
 )
 from save_convert.tales_of.xillia.dicts.tales_of_xillia_change_map_dict import (
     ChangeMapSaveDict,

@@ -16,7 +16,7 @@ from save_convert.save_converter_base import (
     SaveCryptBase,
     SaveFormat,
 )
-from save_convert.structs.marshal_structure import ToBytesResult
+from save_convert.structs.marshal_byte_base import ToBytesResult
 from save_convert.tales_of.xillia.tales_of_xillia_dicts import XilliaRemasteredSaveDict
 from save_convert.tales_of.xillia.tales_of_xillia_structs import (
     SAVE_SECTION_TO_CLASS_TABLE,
@@ -236,8 +236,15 @@ class SaveConvertXillia(SaveConvertBase):
                 LOGGER.error(f"Tales of Xillia Remastered output struct is missing field: {save_section_entry['Key']}")
                 return ToBytesResult(False)
 
+            save_block_data = save_section_entry["Value"]
+            if not save_block_data:
+                LOGGER.debug(
+                    f"Save Block section {save_section_entry['Key']} is empty."
+                    f" The save struct {output_struct} field will be left default initialized"
+                )
+                continue
             try:
-                save_section_data = json.loads(save_section_entry["Value"])
+                save_section_data = json.loads(save_block_data)
             except json.JSONDecodeError as err:
                 LOGGER.error(f"Failed decoding save block section {save_section_entry['Key']} to JSON: {err}.")
                 return ToBytesResult(False)

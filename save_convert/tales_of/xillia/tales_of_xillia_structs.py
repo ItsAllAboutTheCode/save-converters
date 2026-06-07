@@ -8,14 +8,13 @@ import sys
 from ctypes import Array, c_char, c_uint8, c_uint16, c_uint32
 from typing import NamedTuple, cast, override
 
+from save_convert.structs.marshal_byte_base import FromBytesResult, MarshalStructByteBase
+from save_convert.structs.marshal_dict_base import ToDictResult
+from save_convert.structs.marshal_struct_base import ByteorderLiteral, assert_struct_size
 from save_convert.structs.marshal_structure import (
-    ByteorderLiteral,
     FillEndianSwapStructure,
-    FromBytesResult,
     MarshalStructure,
     OffsetField,
-    ToDictResult,
-    assert_struct_size,
 )
 from save_convert.tales_of.tales_of_utils import COMPACT_JSON_SEPARATORS
 from save_convert.tales_of.xillia.structs.tales_of_xillia_auto_item_struct import AUTO_ITEM_SLOT_SAVE_DATA
@@ -271,7 +270,7 @@ class XilliaSaveStruct(FillEndianSwapStructure):  # type: ignore[metaclass]
 
     @override
     @staticmethod
-    def from_bytes[T: MarshalStructure](
+    def from_bytes[T: MarshalStructByteBase](
         input_data: memoryview, struct_type: type[T], byteorder: ByteorderLiteral = "big"
     ) -> FromBytesResult[T]:
         """

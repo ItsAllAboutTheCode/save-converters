@@ -2,27 +2,30 @@
 List of structures mapping to raw binary save file for Tales of Xillia
 """
 
-from ctypes import c_bool, c_uint8, c_uint32
+from ctypes import c_bool, c_uint32
 
+from save_convert.structs.marshal_struct_base import assert_struct_no_padding
 from save_convert.structs.marshal_structure import (
-    MarshalStructure,
-    assert_struct_size,
+    FillEndianSwapStructure,
+    OffsetField,
 )
 
 
-class PLAYER_SAVE_DATA(MarshalStructure):
-    class PlayerData(MarshalStructure):
-        _fields_ = [
-            ("mVersion", c_uint32),
-            ("mOperation", c_uint32),
-            ("mHoldDush", c_bool),
-            ("__padding__", c_uint8 * 3),
+class PLAYER_SAVE_DATA(FillEndianSwapStructure):  #  type: ignore[metaclass]
+    class PlayerData(FillEndianSwapStructure):  #  type: ignore[metaclass]
+        _size_ = 0xC
+        _offset_fields_ = [
+            OffsetField(0x0, ("mVersion", c_uint32)),
+            OffsetField(0x4, ("mOperation", c_uint32)),
+            OffsetField(0x8, ("mHoldDush", c_bool)),
         ]
 
-    _fields_ = [
-        ("mPlayerData", PlayerData),
-        ("__align_to_16834__", c_uint8 * (0x4000 - 12)),
+    _size_ = 0x4000
+    _offset_fields_ = [
+        OffsetField(0x0, ("mPlayerData", PlayerData)),
     ]
 
+    assert_struct_no_padding(PlayerData)
 
-assert_struct_size(PLAYER_SAVE_DATA, 0x4000)
+
+assert_struct_no_padding(PLAYER_SAVE_DATA)

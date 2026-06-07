@@ -18,7 +18,8 @@ from save_convert.save_converter_base import (
     PatchOperationState,
     Range,
 )
-from save_convert.structs.marshal_structure import ByteorderLiteral, MarshalStructure, OffsetField
+from save_convert.structs.marshal_struct_base import ByteorderLiteral
+from save_convert.structs.marshal_structure import MarshalStructure, OffsetField
 
 LOGGER = logging.getLogger("patch_struct")
 LOGGER.setLevel(logging.INFO)

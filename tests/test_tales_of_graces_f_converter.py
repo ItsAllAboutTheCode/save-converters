@@ -229,7 +229,7 @@ class TestConvertGracesFSave(TestCase):
                             "-i",
                             str(test_file),
                             "-o",
-                            str(GRACES_F_REMASTERED_SAVE_SIZE),
+                            str(output_directory),
                             "-s",
                             str(save_format),
                         ]

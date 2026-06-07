@@ -2,14 +2,14 @@
 List of structures mapping to raw binary save file for Tales of Xillia
 """
 
-from ctypes import c_bool, c_float, c_int32, c_uint8, c_uint16, c_uint32, c_uint64
+from ctypes import c_bool, c_float, c_int32, c_uint16, c_uint32, c_uint64
 from typing import cast, override
 
+from save_convert.structs.marshal_dict_base import ToDictResult
+from save_convert.structs.marshal_struct_base import assert_struct_no_padding
 from save_convert.structs.marshal_structure import (
-    MarshalStructure,
-    ToDictResult,
-    assert_field_offset,
-    assert_struct_size,
+    FillEndianSwapStructure,
+    OffsetField,
 )
 from save_convert.tales_of.xillia.dicts.tales_of_xillia_party_profile_dict import (
     PartyProfileSaveDict,
@@ -17,90 +17,82 @@ from save_convert.tales_of.xillia.dicts.tales_of_xillia_party_profile_dict impor
 )
 
 
-class PARTY_PROFILE_SAVE_DATA(MarshalStructure):
-    class PartyProfileData(MarshalStructure):
-        class ScenarioEncounterCount(MarshalStructure):
-            _fields_ = [("ScenarioFlag", c_uint32), ("Count", c_uint32)]
+class PARTY_PROFILE_SAVE_DATA(FillEndianSwapStructure):  #  type: ignore[metaclass]
+    class PartyProfileData(FillEndianSwapStructure):  #  type: ignore[metaclass]
+        class ScenarioEncounterCount(FillEndianSwapStructure):  #  type: ignore[metaclass]
+            _size_ = 0x8
+            _offset_fields_ = [OffsetField(0x0, ("ScenarioFlag", c_uint32)), OffsetField(0x4, ("Count", c_uint32))]
 
-        _fields_ = [
-            ("mVersion", c_uint32),  # offset abs=0x230
-            ("__padding1__", c_uint32),  # offset abs=0x234
-            ("mTotalPlayTime", c_uint64),  # offset abs=0x238
-            ("mCurrentPlayTime", c_uint64),  # offset abs=0x240
-            ("mGald", c_uint32),
-            ("__padding2__", c_uint32),
-            ("mCurrentSubEventListNo", c_uint32),
-            ("mMapStayTime", c_uint32),
-            ("mOverLimits", c_float),
-            ("mCurrentEventListNo", c_uint32),
-            ("mShopBuildPoint", c_uint32 * 5),
-            ("mShopBuildLevel", c_uint32 * 5),
-            ("mPrevShopBuildBonusTime", c_uint64),
-            ("mShopBuildBonus", c_uint32 * 5),
-            ("mShopBuildBonusKind", c_uint32 * 5),
-            ("mBottle", c_uint32),
-            ("mGradeShopFlag", c_uint16 * 32),
-            ("mFameFlag", c_uint16 * 32),
-            ("mGameClearCountJUR", c_uint32),
-            ("mOverLimitsCondition", c_uint32),
-            ("mActiveCookItemId", c_uint32),
-            ("mRemainCookBattleCount", c_uint32),
-            ("mUpdateShopBuildBonusFlag", c_bool),
-            ("__padding3__", c_uint8 * 3),
-            ("mBattleShopBuildBonusJudgePercent", c_uint32),
-            ("mNextShopBuildBonus", c_uint32 * 5),
-            ("mNextShopBuildBonusKind", c_uint32 * 5),
-            ("mAutoItemEnable", c_bool),
-            ("__padding4__", c_uint8 * 3),
-            ("mFameGetRequestFlag", c_uint16 * 32),
-            ("mEncounterCount", c_uint32),
-            ("mGameClearCountMIR", c_uint32),
-            ("mBattleResultFlag", c_uint32 * 16),
-            ("mBeforeCookItemId", c_uint32),
-            ("mTotalWorldMapJumpCount", c_uint32),
-            ("mDetailWorldMapJumpCount", c_uint32),
-            ("mScenarioEncounterCount", ScenarioEncounterCount * 16),
-            ("mBattleResultDialogueCount", c_uint32),
-            ("mLocationStayTime", c_uint64),  # offset abs=0x498
-            ("mTotalBlackFeatherCount", c_uint32),  # offset rel 0x270, abs=0x4A0
-            ("__align_to_4096__", c_uint8 * (0x1000 - 0x274)),  # offset rel 0x274, abs=0x4A4
+        _size_ = 0x1000
+        _offset_fields_ = [
+            OffsetField(0x0, ("mVersion", c_uint32)),  # offset abs=0x230
+            OffsetField(0x8, ("mTotalPlayTime", c_uint64)),  # offset abs=0x238
+            OffsetField(0x10, ("mCurrentPlayTime", c_uint64)),  # offset abs=0x240
+            OffsetField(0x18, ("mGald", c_uint32)),  # offset abs=0x248
+            OffsetField(0x1C, ("mCurrentSubEventListNo", c_uint32)),  # offset abs=0x24C
+            OffsetField(0x20, ("mMapStayTime", c_uint64)),  # offset abs=0x250
+            OffsetField(0x28, ("mOverLimits", c_float)),  # offset abs=0x258
+            OffsetField(0x2C, ("mCurrentEventListNo", c_uint32)),  # offset abs=0x25C
+            OffsetField(0x30, ("mShopBuildPoint", c_uint32 * 5)),  # offset abs=0x260
+            OffsetField(0x44, ("mShopBuildLevel", c_uint32 * 5)),  # offset abs=0x274
+            OffsetField(0x58, ("mPrevShopBuildBonusTime", c_uint64)),  # offset abs=0x288
+            OffsetField(0x60, ("mShopBuildBonus", c_uint32 * 5)),  # offset abs=0x290
+            OffsetField(0x74, ("mShopBuildBonusKind", c_uint32 * 5)),  # offset abs=0x2A4
+            OffsetField(0x88, ("mBottle", c_uint32)),  # offset abs=0x2B8
+            OffsetField(0x8C, ("mGradeShopFlag", c_uint16 * 32)),  # offset abs=0x2BC
+            OffsetField(0xCC, ("mFameFlag", c_uint16 * 32)),  # offset abs=0x2FC
+            OffsetField(0x10C, ("mGameClearCountJUR", c_uint32)),  # offset abs=0x33C
+            OffsetField(0x110, ("mOverLimitsCondition", c_uint32)),  # offset abs=0x340
+            OffsetField(0x114, ("mActiveCookItemId", c_uint32)),  # offset abs=0x344
+            OffsetField(0x118, ("mRemainCookBattleCount", c_uint32)),  # offset abs=0x348
+            OffsetField(0x11C, ("mUpdateShopBuildBonusFlag", c_bool)),  # offset abs=0x34C
+            OffsetField(0x120, ("mBattleShopBuildBonusJudgePercent", c_uint32)),  # offset abs=0x350
+            OffsetField(0x124, ("mNextShopBuildBonus", c_uint32 * 5)),  # offset abs=0x354
+            OffsetField(0x138, ("mNextShopBuildBonusKind", c_uint32 * 5)),  # offset abs=0x368
+            OffsetField(0x14C, ("mAutoItemEnable", c_bool)),  # offset abs=0x37C
+            OffsetField(0x150, ("mFameGetRequestFlag", c_uint16 * 32)),  # offset abs=0x380
+            OffsetField(0x190, ("mEncounterCount", c_uint32)),  # offset abs=0x3C0
+            OffsetField(0x194, ("mGameClearCountMIR", c_uint32)),  # offset abs=0x3C4
+            OffsetField(0x198, ("mBattleResultFlag", c_uint32 * 16)),  # offset abs=0x4C8
+            OffsetField(0x1D8, ("mBeforeCookItemId", c_uint32)),  # offset abs=0x408
+            OffsetField(0x1DC, ("mTotalWorldMapJumpCount", c_uint32)),  # offset abs=0x40C
+            OffsetField(0x1E0, ("mDetailWorldMapJumpCount", c_uint32)),  # offset abs=0x410
+            OffsetField(0x1E4, ("mScenarioEncounterCount", ScenarioEncounterCount * 16)),  #  type: ignore[arg-type,operator] # offset abs=0x414
+            OffsetField(0x264, ("mBattleResultDialogueCount", c_uint32)),  # offset abs=0x494
+            OffsetField(0x268, ("mLocationStayTime", c_uint64)),  # offset abs=0x498
+            OffsetField(0x270, ("mTotalBlackFeatherCount", c_uint32)),  # offset rel 0x270, abs=0x4A0
         ]
 
-    assert_struct_size(PartyProfileData, 0x1000)
-
-    class EventListData(MarshalStructure):
+    class EventListData(FillEndianSwapStructure):  #  type: ignore[metaclass]
         """
         NOTE: All the flags here are stored as SIGNED 32-bit ints
         """
 
-        _fields_ = [
-            ("mOpenBitFlag", c_int32 * 256),  # offset rel=0x0, abs=0x1230
-            ("mUpdateBitFlag", c_int32 * 16),  # offset rel=0x400, abs=0x1630
-            ("mNewBitFlag", c_int32 * 16),  # offset rel=0x440, abs=0x1670
-            ("mCompleteBitFlag", c_int32 * 16),  # offset rel=0x480, abs=0x16B0
-            ("mSynopsisOpenBitFlag", c_int32 * 32),  # offset rel=0x4C0, abs=0x16F0
-            ("mViewBitFlag", c_int32 * 32),  # offset rel=0x540, abs=0x1770
-            ("__align_to_2048__", c_uint8 * 576),  # offset rel=0x5C0, abs=0x17F0
+        _size_ = 0x800
+        _offset_fields_ = [
+            OffsetField(0x0, ("mOpenBitFlag", c_int32 * 256)),  # offset rel=0x0, abs=0x1230
+            OffsetField(0x400, ("mUpdateBitFlag", c_int32 * 16)),  # offset rel=0x400, abs=0x1630
+            OffsetField(0x440, ("mNewBitFlag", c_int32 * 16)),  # offset rel=0x440, abs=0x1670
+            OffsetField(0x480, ("mCompleteBitFlag", c_int32 * 16)),  # offset rel=0x480, abs=0x16B0
+            OffsetField(0x4C0, ("mSynopsisOpenBitFlag", c_int32 * 32)),  # offset rel=0x4C0, abs=0x16F0
+            OffsetField(0x540, ("mViewBitFlag", c_int32 * 32)),  # offset rel=0x540, abs=0x1770
         ]
 
-    assert_struct_size(EventListData, 0x800)
-
-    class DefeatHistoryData(MarshalStructure):
+    class DefeatHistoryData(FillEndianSwapStructure):  #  type: ignore[metaclass]
         """
         NOTE: Note this flag is stored UNSIGNED
         """
 
-        _fields_ = [
-            ("mFlag", c_uint32 * 64),
+        _size_ = 0x100
+        _offset_fields_ = [
+            OffsetField(0x0, ("mFlag", c_uint32 * 64)),
         ]
 
-    assert_struct_size(DefeatHistoryData, 0x100)
-
-    _fields_ = [
-        ("mPartyProfileData", PartyProfileData),  # offset rel=0x0, abs=0x230
-        ("mEventListData", EventListData),  # offset rel=0x1000, abs=0x1230
-        ("mDefeatHistoryData", DefeatHistoryData),  # offset rel=0x1800, abs=0x1A30
-        ("__align_to_16384__", c_uint8 * 9984),  # offset rel=0x1900, abs=0x1B30
+    _size_ = 0x4000
+    _offset_fields_ = [
+        OffsetField(0x0, ("mPartyProfileData", PartyProfileData)),  # offset rel=0x0, abs=0x230
+        OffsetField(0x1000, ("mEventListData", EventListData)),  # offset rel=0x1000, abs=0x1230
+        OffsetField(0x1800, ("mDefeatHistoryData", DefeatHistoryData)),  # offset rel=0x1800, abs=0x1A30
     ]
 
     @override
@@ -129,6 +121,4 @@ class PARTY_PROFILE_SAVE_DATA(MarshalStructure):
         return ToDictResult(True, output_dict)
 
 
-assert_field_offset(PARTY_PROFILE_SAVE_DATA, "mEventListData", 0x1000)
-assert_field_offset(PARTY_PROFILE_SAVE_DATA, "mDefeatHistoryData", 0x1800)
-assert_struct_size(PARTY_PROFILE_SAVE_DATA, 0x4000)
+assert_struct_no_padding(PARTY_PROFILE_SAVE_DATA)

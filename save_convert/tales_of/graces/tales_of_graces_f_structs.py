@@ -5,11 +5,11 @@ The TOGAPP.bin file is mapped to these structures
 
 from ctypes import c_float, c_uint8, c_uint16, c_uint32
 
+from save_convert.structs.marshal_struct_base import assert_struct_size
 from save_convert.structs.marshal_structure import (
     FillEndianSwapStructure,
     MarshalStructure,
     OffsetField,
-    assert_struct_size,
 )
 
 # Save size of TOGAPP.bin which contains the binary data that is loaded by the game

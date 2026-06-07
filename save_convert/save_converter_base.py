@@ -17,7 +17,8 @@ from itertools import islice
 from pathlib import Path
 from typing import NamedTuple, Protocol, override
 
-from save_convert.structs.marshal_structure import ByteorderLiteral, MarshalStructure
+from save_convert.structs.marshal_struct_base import ByteorderLiteral
+from save_convert.structs.marshal_structure import MarshalStructure
 
 LOGGER = logging.getLogger("save_converter_base")
 LOGGER.setLevel(logging.INFO)

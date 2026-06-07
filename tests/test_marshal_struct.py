@@ -29,14 +29,12 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 from unittest import TestCase
 
 from ruamel.yaml import YAML
+from save_convert.structs.marshal_struct_base import StructureDict, StructureList, eq_compare_and_return_field_failure
 from save_convert.structs.marshal_structure import (
     FillEndianSwapStructure,
     MarshalStructure,
     MarshalUnion,
     OffsetField,
-    StructureDict,
-    StructureList,
-    eq_compare_and_return_field_failure,
 )
 
 if TYPE_CHECKING:
