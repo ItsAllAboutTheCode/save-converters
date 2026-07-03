@@ -41,8 +41,8 @@ class Scenario(FillEndianSwapStructure):  #  type: ignore[metaclass]
             class MapTerrainData(FillEndianSwapStructure):  #  type: ignore[metaclass]
                 _size_ = 0x18
                 _offset_fields_ = [
-                    OffsetField(0x0, ("szTerrainName", c_char * 4)),
-                    OffsetField(0x4, ("szTerrainFile", c_char * 4)),
+                    OffsetField(0x0, ("szTerrainName", c_uint8 * 4)),
+                    OffsetField(0x4, ("szTerrainFile", c_uint8 * 4)),
                     OffsetField(0x8, ("x", c_float)),
                     OffsetField(0xC, ("y", c_float)),
                     OffsetField(0x10, ("z", c_float)),
