@@ -263,7 +263,7 @@ class SaveConvertXillia(SaveConvertBase):
 
 def add_commands(parser: argparse.ArgumentParser) -> None:
     parser.description = (
-        "Save Decrypter/Encrtper for Tales of Xillia Remastered\n"
+        "Save Decrypter/Encrypter for Tales of Xillia Remastered\n"
         + "Supports encryption/decryption for PC, PS5, PS4, Nintendo Switch, XBOX saves if they are console decrypted."
     )
     # Default to showing help if a sub command is not supplied

@@ -349,9 +349,6 @@ class SaveConvertGracesFEncrypted(SaveConvertBase):
     def create_save_patch_table(self) -> ConvertPatchTable:
         """Returns a dictionary of offset -> byte array entries that indicates which
         actions should be performed when an address is encountered from the input save
-
-        :param: patch_dlc_item_checks - If True, replaces the DLC obtained item bits from the save file to be unobtained
-        This should allow bypassing being unable to load the save due to DLC
         """
         # START Replace Offset Table populate
         new_patch_table: ConvertPatchTable = ConvertPatchTable(
