@@ -14,6 +14,7 @@ from typing import Any, override
 from Crypto.Cipher import AES  # type: ignore[import-not-found]
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Util.Padding import pad, unpad
+
 from save_convert.save_converter_base import (
     NSW_TO_PC_CONVERT_FORMAT,
     NSW_TO_PS3_CONVERT_FORMAT,
