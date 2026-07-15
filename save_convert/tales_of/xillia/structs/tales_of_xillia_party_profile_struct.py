@@ -3,9 +3,9 @@ List of structures mapping to raw binary save file for Tales of Xillia
 """
 
 from ctypes import c_bool, c_float, c_int32, c_uint16, c_uint32, c_uint64
-from typing import cast, override
+from typing import Any, cast, override
 
-from save_convert.structs.marshal_dict_base import ToDictResult
+from save_convert.structs.marshal_dict_base import FromDictResult, MarshalStructDictBase, ToDictResult
 from save_convert.structs.marshal_struct_base import assert_struct_no_padding
 from save_convert.structs.marshal_structure import (
     FillEndianSwapStructure,
@@ -29,7 +29,7 @@ class PARTY_PROFILE_SAVE_DATA(FillEndianSwapStructure):  #  type: ignore[metacla
             OffsetField(0x8, ("mTotalPlayTime", c_uint64)),  # offset abs=0x238
             OffsetField(0x10, ("mCurrentPlayTime", c_uint64)),  # offset abs=0x240
             OffsetField(0x18, ("mGald", c_uint32)),  # offset abs=0x248
-            OffsetField(0x1C, ("mCurrentSubEventListNo", c_uint32)),  # offset abs=0x24C
+            OffsetField(0x1C, ("mCurrentSubEventListNo", c_int32)),  # offset abs=0x24C
             OffsetField(0x20, ("mMapStayTime", c_uint64)),  # offset abs=0x250
             OffsetField(0x28, ("mOverLimits", c_float)),  # offset abs=0x258
             OffsetField(0x2C, ("mCurrentEventListNo", c_uint32)),  # offset abs=0x25C
@@ -100,6 +100,9 @@ class PARTY_PROFILE_SAVE_DATA(FillEndianSwapStructure):  #  type: ignore[metacla
         """
         The PS3 save doesn't appear to have "mOnOffGradeShopFlag" section
         So Mirror the mGradeShopFlag array to mOnOffGradeShopFlag value
+
+        Also the mCurrentSubEventListNo is set to 0 on PS3 when a sub event is not active,
+        however on PC it is set to -1
         """
 
         party_profile_dict: PartyProfileSaveDict = create_party_profile_save_dict()
@@ -118,7 +121,30 @@ class PARTY_PROFILE_SAVE_DATA(FillEndianSwapStructure):  #  type: ignore[metacla
             ]
         output_dict["mPartyProfileData"]["mOnOffGradeShopFlag"] = output_dict["mPartyProfileData"]["mGradeShopFlag"]
 
+        if output_dict["mPartyProfileData"]["mCurrentSubEventListNo"] == 0:
+            output_dict["mPartyProfileData"]["mCurrentSubEventListNo"] = -1
+
         return ToDictResult(True, output_dict)
+
+    @override
+    @staticmethod
+    def from_dict(
+        input_dict: dict[str, Any], struct_type: type[MarshalStructDictBase], skip_double_underscore_fields: bool = True
+    ) -> FromDictResult[MarshalStructDictBase]:
+        """
+        Maps the PARTY_PROFILE_SAVE_DATA `mCurrentSubEventListNo` field value of -1 to 0 when converting from PC -> PS3
+        """
+        struct_result = MarshalStructDictBase.from_dict(input_dict, struct_type, skip_double_underscore_fields)
+        if not struct_result or not struct_result.value:
+            return struct_result
+
+        party_profile_data = getattr(struct_result.value, "mPartyProfileData")
+        if party_profile_data is not None:
+            current_sub_event_list_num = getattr(party_profile_data, "mCurrentSubEventListNo")
+            if isinstance(current_sub_event_list_num, int) and current_sub_event_list_num == -1:
+                setattr(party_profile_data, "mCurrentSubEventListNo", 0)
+
+        return struct_result
 
 
 assert_struct_no_padding(PARTY_PROFILE_SAVE_DATA)

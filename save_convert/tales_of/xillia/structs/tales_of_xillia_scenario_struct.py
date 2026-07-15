@@ -193,6 +193,8 @@ class Scenario(FillEndianSwapStructure):  #  type: ignore[metaclass]
         Also the vector appears to be scaled up by 100x on PS3.
         The rotation float on PS3 is stored in radians, while the PC version is stored in degrees.
 
+        Convert Terrain 4-byte string buffer into an empty string
+
         TODO: Also the bitflags array needs modification in some way
         """
 
@@ -225,6 +227,16 @@ class Scenario(FillEndianSwapStructure):  #  type: ignore[metaclass]
         # convert radians to degrees
         rad_to_deg(output_dict, "dir")
         rad_to_deg(output_dict, "yaw")
+
+        output_dict["globalbuffer"]["global"]["aRTMapTerrainCtrl"]
+        try:
+            terrain_map_ctrl_list = output_dict["globalbuffer"]["global"]["aRTMapTerrainCtrl"]
+        except KeyError:
+            return ToDictResult(False)
+
+        for terrain_data in terrain_map_ctrl_list:
+            terrain_data["szTerrainName"] = ""
+            terrain_data["szTerrainFile"] = ""
 
         return ToDictResult(True, output_dict)
 
