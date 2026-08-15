@@ -1973,6 +1973,32 @@ class MoreUnknownShortsAt_0xB3D8(MarshalStructure):
 assert_struct_size(MoreUnknownShortsAt_0xB3D8, 0x290)
 
 
+class GradeBonusDataStruct(MarshalStructure):
+    """Starts at offset 0xB8B0"""
+
+    _fields_ = [
+        ("clear_bonus", c_uint16),  # + 0x0
+        ("title_bonus", c_uint16),  # + 0x2
+        ("skill_bonus", c_uint16),  # + 0x4
+        ("arte_usage_bonus", c_uint16),  # + 0x6
+        ("book_completion_bonus", c_uint16),  # + 0x8
+        ("side_quest_bonus", c_uint16),  # + 0xA
+        ("combo_bonus", c_uint16),  # + 0xC
+        ("technical_bonus", c_uint16),  # + 0xE
+        ("ex_dungeon_bonus", c_uint16),  # + 0x10
+        ("speed_bonus", c_uint16),  # + 0x12
+        ("unyielding_bonus", c_uint16),  # + 0x14
+        ("short_padding", c_uint16),  # + 0x16 <-- The unyielding bonus might be an c_uint32, but I am not sure
+        # So instead a guess is being made that there is 2 bytes padding afterwards
+        ("exterminator_bonus", c_uint16),  # + 0x18
+        ("save_the_gels_bonus", c_uint16),  # + 0x1A
+        ("enhancement_bonus", c_uint16),  # + 0x1C
+    ]
+
+
+assert_struct_size(GradeBonusDataStruct, 0x1E)
+
+
 class UnknownStructArrayAt_0xB8D0(MarshalStructure):
     """Starts at offset 0xB8D0"""
 
@@ -2294,6 +2320,7 @@ class TalesOfGracesFSaveStruct(FillEndianSwapStructure):  # type: ignore[metacla
         OffsetField(0xAF54, ("enemy_data", EnemyDataArray)),
         OffsetField(0xB0D8, ("unknown_shorts_at_0xB0D8", UnknownShortsAt_0xB0D8)),
         OffsetField(0xB3D8, ("unknown_shorts_at_0xB3D8", MoreUnknownShortsAt_0xB3D8)),
+        OffsetField(0xB8B0, ("grade_bonus_data", GradeBonusDataStruct)),
         OffsetField(0xB8D0, ("unknown_struct_at_0xB8D0", UnknownStructArrayAt_0xB8D0)),
         OffsetField(0xB994, ("unknown_record_data", RecordDataUnknownStruct)),
         OffsetField(0xB9B0, ("record_data", RecordDataStruct)),
