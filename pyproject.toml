@@ -112,6 +112,7 @@ src = [
   "save_convert",
   "tests",
 ]
+extend-exclude = ["*.md"]
 lint.select = [
 "E", "F", "I"
 ]
