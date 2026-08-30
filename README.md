@@ -96,3 +96,7 @@ All executables on the [Releases](https://github.com/ItsAllAboutTheCode/save-con
 
 `Tales of` save converters requirements: Python 3.12\+
 
+
+## Tutorial - How to use save converter via CLI
+
+https://github.com/user-attachments/assets/ef165a15-1f5a-46fa-9d33-c8e3a3ac6428
