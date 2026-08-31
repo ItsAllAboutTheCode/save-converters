@@ -8,6 +8,7 @@ import json
 import logging
 import struct
 import sys
+from ctypes import sizeof
 from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum
@@ -73,7 +74,12 @@ from save_convert.tales_of.graces.tales_of_graces_f_big_data import (
     DEFAULT_ICON_PNG_CAPTURE_SIZE,
     DEFAULT_NATIVE_SYS_PARAM_BASE64,
 )
-from save_convert.tales_of.graces.tales_of_graces_f_structs import GRACES_F_RAW_SAVE_SIZE, TalesOfGracesFSaveStruct
+from save_convert.tales_of.graces.tales_of_graces_f_structs import (
+    GRACES_F_DLC_REDEEMED_STATUS_OFFSET,
+    GRACES_F_RAW_SAVE_SIZE,
+    DLCRedeemedStateStruct,
+    TalesOfGracesFSaveStruct,
+)
 from save_convert.tales_of.tales_of_utils import COMPACT_JSON_SEPARATORS
 
 SCRIPT_DIR: Path = Path(__file__).parent.resolve()
@@ -515,7 +521,7 @@ class SaveContents:
 
     def _update_metadata_from_ps3(self) -> bool:
         """
-        Updates the Json metadata section stored within the save file with the playtime data
+        Updates the JSON metadata section stored within the save file with the playtime data
         The icon_json_buffer and raw_save_binary_buffer fields must be valid
         otherwise no updates to the will metadata section occurs
         """
@@ -589,6 +595,23 @@ class SaveContents:
         self.raw_save_binary_buffer = bytes(writable_buffer)
 
         return True
+
+    def patch_dlc_item_status(self) -> None:
+        """
+        Zeroes out the DLC obtained status bytes from the raw native data, so that the save is loadable
+        for game versions that do not have the DLC.
+        """
+        # Create a copy of the raw save data into a mutable bytearray
+        mutable_save_buffer = bytearray(self.raw_save_binary_buffer)
+
+        dlc_item_raw_offset_start = GRACES_F_DLC_REDEEMED_STATUS_OFFSET
+        dlc_item_raw_offset_end = dlc_item_raw_offset_start + sizeof(DLCRedeemedStateStruct)
+        dlc_obtained_bytes = memoryview(mutable_save_buffer)[dlc_item_raw_offset_start:dlc_item_raw_offset_end]
+        # Set the bytes to 00 of the address range containing the dlc item data
+        dlc_obtained_bytes[:] = bytes(len(dlc_obtained_bytes))
+
+        # Update the raw save data back into the JSON data
+        self.raw_save_binary_buffer = bytes(mutable_save_buffer)
 
     def remastered_save_default(self) -> None:
         self.save_json_dict = RemasteredSave(
@@ -1503,6 +1526,15 @@ def add_convert_arguments(parser: argparse.ArgumentParser) -> None:
         action=ConvertFormatAction,
         choices=[str(format) for format in SUPPORTED_CONVERT_FORMATS],
         help="Specifies the input file save format and desired the output file format.",
+    )
+
+    _ = parser.add_argument(
+        "--patch-dlc-item-status-to-unobtained",
+        "-p",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Patches the DLC item obtained bytes from the save file to allow the saves with incompatible DLC"
+        " to be loaded (Default=True)",
     )
 
     # Debug option

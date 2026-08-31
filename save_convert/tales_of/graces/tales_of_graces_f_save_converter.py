@@ -290,10 +290,18 @@ class SaveConvertGracesFEncrypted(SaveConvertBase):
 
     _save_contents: SaveContents
     _debug_ps3_conversion: bool
+    _patch_dlc_item_status: bool
 
     def __init__(self, args: argparse.Namespace):
         super().__init__(args)
         self._save_contents = SaveContents()
+
+        # Zero the obtained status for DLC items.
+        # This allows saves that contain DLC for one platform that the user has access to be loaded
+        # on other platforms where the user does not have access to that DLC
+        # i.e If the user redeemed DLC on PS3, but doesn't have the DLC on the PC version, then this
+        # option sets the DLC item status to unobtained, which allows the save to be loaded on PC
+        self._patch_dlc_item_status = getattr(args, "patch_dlc_item_status_to_unobtained", True)
 
         # When set, a decrypted dump of the TOGAPP.bin afte converting to/from PS3 Big-Endian
         # to other platforms Little-Endian
@@ -315,6 +323,10 @@ class SaveConvertGracesFEncrypted(SaveConvertBase):
         if not SaveContents.from_encrypt_bytes(self._input_data, self._save_contents, self._convert_format.source):
             LOGGER.error(f"Failed to decrypt save file {self._input_path}")
             return False
+
+        # Zero out the DLC item obtained status bytes to allow saves to load for all game versions
+        if self._patch_dlc_item_status:
+            self._save_contents.patch_dlc_item_status()
 
         # Apply the save patch for conversion to/from PS3 data
         converted_data = self.apply_patch(

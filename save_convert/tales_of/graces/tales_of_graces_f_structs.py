@@ -2162,6 +2162,7 @@ class DLCRedeemedStateStruct(MarshalStructure):
     ]
 
 
+GRACES_F_DLC_REDEEMED_STATUS_OFFSET = 0xBD40
 assert_struct_size(DLCRedeemedStateStruct, 0x190)
 
 
@@ -2331,7 +2332,7 @@ class TalesOfGracesFSaveStruct(FillEndianSwapStructure):  # type: ignore[metacla
         OffsetField(0xBC60, ("unknown_ints_at_0xBC60", UnknownIntsAt_0xBC60)),
         OffsetField(0xBCB0, ("unknown_shorts_at_0xBCB0", UnknownShortsAt_0xBCB0)),
         OffsetField(0xBCCC, ("unknown_ints_at_0xBCCC", UnknownIntsAt_0xBCCC)),
-        OffsetField(0xBD40, ("dlc_redeemeed_state", DLCRedeemedStateStruct)),
+        OffsetField(GRACES_F_DLC_REDEEMED_STATUS_OFFSET, ("dlc_redeemed_state", DLCRedeemedStateStruct)),
         OffsetField(0xC1F0, ("unknown_ints_at_0xC1F0", UnknownIntsAt_0xC1F0)),
         OffsetField(0xC438, ("unknown_floats_at_0xC438", UnknownFloatsAt_0xC438)),
         OffsetField(0xC460, ("side_quest_data", SideQuestData)),
