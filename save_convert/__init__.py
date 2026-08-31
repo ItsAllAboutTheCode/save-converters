@@ -19,16 +19,19 @@ converter_modules: ConverterModules = {
     "tales-of-xillia": ModuleInfo("save_convert.tales_of.xillia.tales_of_xillia_save_converter", ["xillia"]),
     "trails-of-cold-steel-i": ModuleInfo(
         "save_convert.trails_of.cold_steel_i.trails_of_cold_steel_i_save_converter",
-        aliases=["cold-steel", "cold-steel-i"],
+        aliases=["cold-steel", "cold-steel-i", "cold-steel-1"],
     ),
     "trails-of-cold-steel-ii": ModuleInfo(
-        "save_convert.trails_of.cold_steel_ii.trails_of_cold_steel_ii_save_converter", aliases=["cold-steel-ii"]
+        "save_convert.trails_of.cold_steel_ii.trails_of_cold_steel_ii_save_converter",
+        aliases=["cold-steel-ii", "cold-steel-2"],
     ),
     "trails-of-cold-steel-iii": ModuleInfo(
-        "save_convert.trails_of.cold_steel_iii.trails_of_cold_steel_iii_save_converter", aliases=["cold-steel-iii"]
+        "save_convert.trails_of.cold_steel_iii.trails_of_cold_steel_iii_save_converter",
+        aliases=["cold-steel-iii", "cold-steel-3"],
     ),
     "trails-of-cold-steel-iv": ModuleInfo(
-        "save_convert.trails_of.cold_steel_iv.trails_of_cold_steel_iv_save_converter", aliases=["cold-steel-iv"]
+        "save_convert.trails_of.cold_steel_iv.trails_of_cold_steel_iv_save_converter",
+        aliases=["cold-steel-iv", "cold-steel-4"],
     ),
     "trails-into-reverie": ModuleInfo(
         "save_convert.trails_of.reverie.trails_into_reverie_save_converter", aliases=["reverie"]
