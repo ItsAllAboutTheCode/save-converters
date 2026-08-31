@@ -534,14 +534,14 @@ def start_convert(args: argparse.Namespace):
 def add_commands(parser: argparse.ArgumentParser) -> None:
     parser.description = "Save Converter (PS3<->PC) for Tales of Vesperia"
     # Add general connection arguments
-    parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
+    _ = parser.add_argument(
         "--input",
         "-i",
         type=pathlib.Path,
         help="Input path to save file",
         required=True,
     )
-    parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
+    _ = parser.add_argument(
         "--output",
         "-o",
         type=pathlib.Path,
@@ -567,7 +567,7 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
             else:
                 raise ValueError(f"Value {values} is not an appropriate choice for argument {options_string}")
 
-    parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
+    _ = parser.add_argument(
         "--convert-format",
         "-f",
         action=ConvertFormatAction,
@@ -577,7 +577,7 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
         " Only PS3 and PC supported at this time",
     )
 
-    parser.add_argument(  # pyright: ignore[reportUnusedCallResult]
+    _ = parser.add_argument(
         "--patch-dlc-item-checks",
         "-p",
         action=argparse.BooleanOptionalAction,
