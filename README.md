@@ -37,11 +37,13 @@ pip install -e .
 ```
 ## Usage
 
-Available converters can found by running the command  
+Available converters can found by running the command (Only for Python scripts)  
 ```bash
 python save_converter.py --help
 ```
-Or if using the executable version of the save converter scrtpt  
+
+### IMPORTANT: Windows users read this
+Or if using the executable version of the save converter script  
 ```
 save_converter --help
 ```

@@ -26,7 +26,17 @@ python save_converter.py tales-of-xillia --help
 
 Alternatively the script of `tales_of_xillia_save_converter.py` can be run directly
 ```bash
-python ./save_convert/tales_of/xillia/tales_of_xillia_save_converter.py  --help
+python ./save_convert/tales_of/xillia/tales_of_xillia_save_converter.py --help
+```
+
+If using the executable version the command to run the tool is:
+* Linux/Mac
+```bash
+./save_converter tales-of-xillia
+```
+* Windows
+```powershell
+.\save_converter.exe tales-of-xillia
 ```
 
 #### Decrypt PC Save

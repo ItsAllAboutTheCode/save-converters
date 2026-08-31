@@ -59,7 +59,17 @@ python save_converter.py tales-of-graces-f --help
 
 Alternatively the script of `tales_of_graces_f_save_converter.py` can be run directly
 ```bash
-python ./save_convert/tales_of/graces/tales_of_graces_f_save_converter.py  --help
+python ./save_convert/tales_of/graces/tales_of_graces_f_save_converter.py --help
+```
+
+If using the executable version the command to run the tool is:
+* Linux/Mac
+```bash
+./save_converter tales-of-graces-f
+```
+* Windows
+```powershell
+.\save_converter.exe tales-of-graces-f
 ```
 
 ### Example

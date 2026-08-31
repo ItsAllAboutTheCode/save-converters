@@ -10,6 +10,21 @@ Information on supported options can be found by running the following command f
 python save_converter.py trails-into-reverie --help
 ```
 
+Alternatively the script of `trails_into_reverie_save_converter.py` can be run directly
+```bash
+python ./save_convert/trails_of/reverie/trails_into_reverie_save_converter.py  --help
+```
+
+If using the executable version the command to run the tool is:
+* Linux/Mac
+```bash
+./save_converter trails-into-reverie
+```
+* Windows
+```powershell
+.\save_converter.exe trails-into-reverie
+```
+
 ### Example
 #### Convert PS4/PS5 -> PC Trails into Reverie Save
 ```bash

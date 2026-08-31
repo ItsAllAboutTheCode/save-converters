@@ -11,7 +11,17 @@ python save_converter.py tales-of-arise --help
 
 Alternatively the script of `tales_of_arise_save_conveter.py` can be run directly
 ```bash
-python ./save_convert/tales_of/arise/tales_of_arise_save_converter.py  --help
+python ./save_convert/tales_of/arise/tales_of_arise_save_converter.py --help
+```
+
+If using the executable version the command to run the tool is:
+* Linux/Mac
+```bash
+./save_converter tales-of-arise
+```
+* Windows
+```powershell
+.\save_converter.exe tales-of-arise
 ```
 
 ### Example
