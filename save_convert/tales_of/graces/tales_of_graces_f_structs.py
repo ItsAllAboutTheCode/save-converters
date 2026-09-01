@@ -128,12 +128,24 @@ class CharacterDataTitleArray(MarshalStructure):
     """Starts at offset 0x118"""
 
     _fields_ = [
-        ("titles", CharacterDataTitle * 200),  # +0x0
-        # total 0x640 bytes
+        ("titles", CharacterDataTitle * 160),  # +0x0
+        # total 0x500 bytes
     ]
 
 
-assert_struct_size(CharacterDataTitleArray, 0x640)
+assert_struct_size(CharacterDataTitleArray, 0x500)
+
+
+class CharacterDataAccelStrategy(MarshalStructure):
+    """Starts at offset 0x754"""
+
+    _fields_ = [
+        ("accel", c_uint32),  # +0x0
+        # total 0x4 bytes
+    ]
+
+
+assert_struct_size(CharacterDataAccelStrategy, 0x4)
 
 
 class CharacterDataArte(MarshalStructure):
@@ -165,26 +177,46 @@ class CharacterDataArteArray(MarshalStructure):
 assert_struct_size(CharacterDataArteArray, 0x300)
 
 
+class CharacterDataStrategy(MarshalStructure):
+    """Starts at offset 0xA68"""
+
+    _fields_ = [
+        ("focus", c_uint8),  # +0x0
+        ("balance", c_uint8),  # +0x1
+        ("style", c_uint8),  # +0x2
+        ("defend", c_uint8),  # +0x3
+        # total 0x4 bytes
+    ]
+
+
+assert_struct_size(CharacterDataStrategy, 0x4)
+
+
 class CharacterDataStruct(MarshalStructure):
     """Starts at offset 0x64"""
 
     _fields_ = [
         ("name", c_uint8 * 32),  # +0x0
         ("stats", CharacterDataStats),  # +0x20
-        ("padding1", c_uint8 * 4),  # +0x7C
+        ("__padding1__", c_uint8 * 4),  # +0x7C
         ("unknown_float1", c_float),  # +0x80
-        ("padding2", c_uint32 * 3),  # +0x84
+        ("__padding2__", c_uint32 * 3),  # +0x84
         ("unknown_float2", c_float),  # +0x90
-        ("padding3", c_uint32 * 3),  # +0x94
+        ("__padding3__", c_uint32 * 3),  # +0x94
         ("unknown_float3", c_float),  # +0xA0
         ("curr_equip", CharacterDataCurrEquipment),  # +0xA4
         ("titles", CharacterDataTitleArray),  # +0xB4
+        ("__padding4__", c_uint8 * 0x138),  # +0x5B4
+        ("accel_strategy", CharacterDataAccelStrategy),  # + 0x6EC
+        ("unknown_int0", c_uint32),  # + 0x6F0
         ("artes", CharacterDataArteArray),  # +0x6F4
         ("unknown_shorts1", c_uint16 * 4),  # +0x9E4
-        ("padding4", c_uint8 * 0x1CC),  # +0x9EC
+        ("unknown_strategy_bytes?", c_uint8 * 24),  # +0x9EC
+        ("strategy", CharacterDataStrategy),  # +0xA04
+        ("__padding5__", c_uint8 * 0x1B0),  # + 0xA08
         ("unknown_int1", c_uint32),  # +0xBB8
         ("unknown_int2", c_uint32),  # +0xBD0
-        ("padding5", c_uint32 * 2),  # +0xBCC
+        ("__padding6__", c_uint32 * 2),  # +0xBCC
         # total 0xBD8 bytes
     ]
 
