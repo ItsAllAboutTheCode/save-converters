@@ -28,7 +28,8 @@ class PlayerLocationOffsetStruct(MarshalStructure):
         ("map_id", c_uint32),  # +0x14
         ("padding2", c_uint8 * 4),  # +0x18
         ("unknown_int1", c_uint32),  # +0x1C
-        ("unknown_data2", c_uint8 * 8),  # +0x20
+        ("map_id2?", c_uint32),  # +0x20
+        ("unknown_data2", c_uint8 * 4),  # +0x24
         ("unknown_int2", c_uint32),  # +0x28
         # total 0x2C bytes
     ]
@@ -128,24 +129,25 @@ class CharacterDataTitleArray(MarshalStructure):
     """Starts at offset 0x118"""
 
     _fields_ = [
-        ("titles", CharacterDataTitle * 160),  # +0x0
-        # total 0x500 bytes
+        ("titles", CharacterDataTitle * 192),  # +0x0
+        # total 0x600 bytes
     ]
 
 
-assert_struct_size(CharacterDataTitleArray, 0x500)
+assert_struct_size(CharacterDataTitleArray, 0x600)
 
 
 class CharacterDataAccelStrategy(MarshalStructure):
-    """Starts at offset 0x754"""
+    """Starts at offset 0x750"""
 
     _fields_ = [
         ("accel", c_uint32),  # +0x0
-        # total 0x4 bytes
+        ("__padding__", c_uint32),  # + 0x4
+        # total 0x8 bytes
     ]
 
 
-assert_struct_size(CharacterDataAccelStrategy, 0x4)
+assert_struct_size(CharacterDataAccelStrategy, 0x8)
 
 
 class CharacterDataArte(MarshalStructure):
@@ -192,6 +194,18 @@ class CharacterDataStrategy(MarshalStructure):
 assert_struct_size(CharacterDataStrategy, 0x4)
 
 
+class CharacterData_UnknownStructOfShorts(MarshalStructure):
+    """Starts at offset 0xA6C"""
+
+    _fields_ = [
+        ("__unknown__", c_uint16 * 150),  # +0x0
+        # total 0x12C bytes
+    ]
+
+
+assert_struct_size(CharacterData_UnknownStructOfShorts, 0x12C)
+
+
 class CharacterDataStruct(MarshalStructure):
     """Starts at offset 0x64"""
 
@@ -206,17 +220,24 @@ class CharacterDataStruct(MarshalStructure):
         ("unknown_float3", c_float),  # +0xA0
         ("curr_equip", CharacterDataCurrEquipment),  # +0xA4
         ("titles", CharacterDataTitleArray),  # +0xB4
-        ("__padding4__", c_uint8 * 0x138),  # +0x5B4
+        ("__padding4__", c_uint8 * 0x38),  # +0x6B4
         ("accel_strategy", CharacterDataAccelStrategy),  # + 0x6EC
-        ("unknown_int0", c_uint32),  # + 0x6F0
         ("artes", CharacterDataArteArray),  # +0x6F4
-        ("unknown_shorts1", c_uint16 * 4),  # +0x9E4
-        ("unknown_strategy_bytes?", c_uint8 * 24),  # +0x9EC
+        ("unknown_shorts1", c_uint16 * 4),  # +0x9F4
+        ("__padding5__", c_uint8 * 8),  # +0x9FC
         ("strategy", CharacterDataStrategy),  # +0xA04
-        ("__padding5__", c_uint8 * 0x1B0),  # + 0xA08
-        ("unknown_int1", c_uint32),  # +0xBB8
-        ("unknown_int2", c_uint32),  # +0xBD0
-        ("__padding6__", c_uint32 * 2),  # +0xBCC
+        ("unknown_struct_of_shorts", CharacterData_UnknownStructOfShorts),  # +0xA08
+        ("__unknown_values__", c_uint8 * 0x50),  # + 0xB34
+        ("__unknown_shorts2__", c_uint16 * 2),  # + 0xB84
+        ("__unknown_values2__", c_uint8 * 4),  # + 0xB88
+        ("__unknown_short2__", c_uint16),  # + 0xB8C
+        ("__unknown_id__", c_uint16),  # + 0xB8E
+        ("__unknown_values3__", c_uint8 * 20),  # + 0xB90
+        ("__unknown_short4__", c_uint16),  # + 0xBA4
+        ("__unknown_values4__", c_uint8 * 34),  # + 0xBA6
+        ("unknown_int1", c_uint32),  # +0xBC8
+        ("unknown_int2", c_uint32),  # +0xBCC
+        ("__padding7__", c_uint32 * 2),  # +0xBD0
         # total 0xBD8 bytes
     ]
 
@@ -2005,6 +2026,21 @@ class MoreUnknownShortsAt_0xB3D8(MarshalStructure):
 assert_struct_size(MoreUnknownShortsAt_0xB3D8, 0x290)
 
 
+class ImportantFloatsRelatedToMovement_At0xB880(MarshalStructure):
+    """Starts at offset 0xB880
+    These values are important for allowing character to move after save conversion
+    It doesn't appear to be coordinate information though, so it is unknown what these values are
+    """
+
+    _fields_ = [
+        ("__unknown_floats__", c_float),  # + 0x0
+        # total 0x4
+    ]
+
+
+assert_struct_size(ImportantFloatsRelatedToMovement_At0xB880, 0x4)
+
+
 class GradeBonusDataStruct(MarshalStructure):
     """Starts at offset 0xB8B0"""
 
@@ -2025,6 +2061,7 @@ class GradeBonusDataStruct(MarshalStructure):
         ("exterminator_bonus", c_uint16),  # + 0x18
         ("save_the_gels_bonus", c_uint16),  # + 0x1A
         ("enhancement_bonus", c_uint16),  # + 0x1C
+        # total 0x1E
     ]
 
 
@@ -2246,7 +2283,19 @@ class UnknownBitmapAt0xC4D4(MarshalStructure):
 assert_struct_size(UnknownBitmapAt0xC4D4, 0xC)
 
 
-class UnknownIntAt_0xC5E4(MarshalStructure):
+class UnknownIntsAt_0xC4F4(MarshalStructure):
+    """Starts at offset 0xC4F4"""
+
+    _fields_ = [
+        ("__unknown_ints__", c_uint32 * 40),  # +0x0
+        # total 0xA0 bytes
+    ]
+
+
+assert_struct_size(UnknownIntsAt_0xC4F4, 0xA0)
+
+
+class AttachmentDataAt_0xC5E4(MarshalStructure):
     """Starts at offset 0xC5E4"""
 
     _fields_ = [
@@ -2255,7 +2304,7 @@ class UnknownIntAt_0xC5E4(MarshalStructure):
     ]
 
 
-assert_struct_size(UnknownIntAt_0xC5E4, 0x4)
+assert_struct_size(AttachmentDataAt_0xC5E4, 0x4)
 
 
 class UnknownIntAt_0xC5EC(MarshalStructure):
@@ -2353,6 +2402,7 @@ class TalesOfGracesFSaveStruct(FillEndianSwapStructure):  # type: ignore[metacla
         OffsetField(0xAF54, ("enemy_data", EnemyDataArray)),
         OffsetField(0xB0D8, ("unknown_shorts_at_0xB0D8", UnknownShortsAt_0xB0D8)),
         OffsetField(0xB3D8, ("unknown_shorts_at_0xB3D8", MoreUnknownShortsAt_0xB3D8)),
+        OffsetField(0xB880, ("movement_related_floats", ImportantFloatsRelatedToMovement_At0xB880)),
         OffsetField(0xB8B0, ("grade_bonus_data", GradeBonusDataStruct)),
         OffsetField(0xB8D0, ("unknown_struct_at_0xB8D0", UnknownStructArrayAt_0xB8D0)),
         OffsetField(0xB994, ("unknown_record_data", RecordDataUnknownStruct)),
@@ -2369,7 +2419,8 @@ class TalesOfGracesFSaveStruct(FillEndianSwapStructure):  # type: ignore[metacla
         OffsetField(0xC438, ("unknown_floats_at_0xC438", UnknownFloatsAt_0xC438)),
         OffsetField(0xC460, ("side_quest_data", SideQuestData)),
         OffsetField(0xC4D4, ("unknown_inverted_bitmap_at_0xC4D4", UnknownBitmapAt0xC4D4)),
-        OffsetField(0xC5E4, ("unknown_int_at_0xC5E4", UnknownIntAt_0xC5E4)),
+        OffsetField(0xC4F4, ("attachment_data_at_0xC4F4", UnknownIntsAt_0xC4F4)),
+        OffsetField(0xC5E4, ("unknown_int_at_0xC5E4", AttachmentDataAt_0xC5E4)),
         OffsetField(0xC5EC, ("unknown_int_at_0xC5EC", UnknownIntAt_0xC5EC)),
         OffsetField(0x10500, ("unknown_int_at_0x10500", UnknownIntAt_0x10500)),
         OffsetField(0x1057C, ("unknown_int_at_0x1057C", UnknownIntAt_0x1057C)),
