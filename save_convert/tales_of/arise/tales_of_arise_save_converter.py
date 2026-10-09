@@ -1744,6 +1744,7 @@ def main():
     )
 
     _ = parser.add_argument(
+        "--loglevel",
         "--log-level",
         "-l",
         default=logging.INFO,

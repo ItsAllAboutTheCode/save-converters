@@ -36,6 +36,7 @@ def main():
     parser.set_defaults(func=lambda _: parser.print_help(sys.stderr))
 
     _ = parser.add_argument(
+        "--loglevel",
         "--log-level",
         "-l",
         default=logging.getLevelName(logging.INFO),
@@ -47,7 +48,7 @@ def main():
     add_commands(parser)
 
     args = parser.parse_args()
-    LOGGER.setLevel(args.log_level)
+    LOGGER.setLevel(args.loglevel)
 
     # No arguments have been supplied so print help
     if len(sys.argv) == 1:

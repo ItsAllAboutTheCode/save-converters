@@ -1,4 +1,4 @@
-# Map of game name to save  converter modules
+# Map of game name to save converter modules
 from typing import NamedTuple, TypeAlias
 
 
