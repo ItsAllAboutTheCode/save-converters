@@ -56,6 +56,7 @@ Save converters or decrypters are supported for the following games:
 | :--- | :--- | :-- |
 | Tales of Arise | [tales-of-arise-converter-decrypter](./save_convert/tales_of/arise/README.md) | None |
 | Tales of Berseria | [tales-of-beseria-remastered-convert-notes](./save_convert/tales_of/berseria/README.md) | None |
+| Tales of Eternia | [tales-of-eternia-remastered-convert-notes](./save_convert/tales_of/eternia/README.md) | None |
 | Tales of Graces f | [tales-of-graces-f-converter-decrypter](./save_convert/tales_of/graces/README.md) | None |
 | Tales of Vesperia | [tales-of-vesperia-converter](./save_convert/tales_of/vesperia/README.md) | [tales-of-vesperia-cheat-tables](./save_convert/tales_of/vesperia/cheat_tables) |
 | Tales of Xillia | [tales-of-xillia-converter-decrypter](./save_convert/tales_of/xillia/README.md) | None |
