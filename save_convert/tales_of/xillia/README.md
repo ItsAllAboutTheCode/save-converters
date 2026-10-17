@@ -1,4 +1,4 @@
-# Tales of Xilia Remastered Save Decrypter/Encrypter
+# Tales of Xillia Remastered Save Decrypter/Encrypter
 Save Converter/Decrypter/Encrypter for Tales of Xillia Remastered   
 It supports decryption/encryption of saves between for PC, PS4, PS5, Nintendo Switch, Xbox One, Xbox Series S|X saves.  
 

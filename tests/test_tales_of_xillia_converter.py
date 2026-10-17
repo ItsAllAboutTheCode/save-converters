@@ -52,7 +52,7 @@ TEST_ENCRYPT_PARAM_LIST: list[TestEncryptSaveTuple] = [
 
 # Test the convert-save logic which performs
 # 1. decryption(if non-PS3)
-# 3. save-conversion between formats
+# 2. save-conversion between formats
 # 3. and then encryption (if non-PS3)
 
 TEST_CONVERT_PARAM_LIST: list[TestConvertSaveRoundtripTuple] = [

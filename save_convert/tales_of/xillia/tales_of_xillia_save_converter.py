@@ -70,7 +70,7 @@ class SaveDecryptXillia(SaveCryptBase):
 
     @override
     def _post_transform(self) -> bool:
-        # First the base post_transform method to dump the decrypted SaveData.json to disk
+        # Invoke the base class _post_transform method to dump the decrypted SaveData.json to disk
         result = super()._post_transform()
         if not self._dump_save_block_data:
             return result

@@ -387,9 +387,7 @@ class SaveContents:
 
     save_json_dict: RemasteredSave
 
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         self.remastered_save_default()
 
     def to_encrypt_bytes(self, output_data: bytearray, save_format: SaveFormat) -> bool:
