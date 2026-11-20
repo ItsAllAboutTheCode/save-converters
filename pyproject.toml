@@ -19,7 +19,8 @@ license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 dependencies = [
       "pycryptodome>=3.23.0",
-      "ruamel.yaml>=0.19.0"
+      "ruamel.yaml>=0.19.0",
+      "pylzma>=0.6.1"
 ]
 
 [project.urls]
@@ -75,7 +76,8 @@ include = [
 dependencies = [
   "pyinstaller",
   "pycryptodome>=3.23.0",
-  "ruamel.yaml>=0.19.0"
+  "ruamel.yaml>=0.19.0",
+  "pylzma>=0.6.1"
 ]
 path = "hatch_build.py"
 pyinstaller_spec = "save_converter.spec"
