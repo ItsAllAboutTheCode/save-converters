@@ -230,7 +230,7 @@ def compress_zlib(input_data: memoryview, compression_sub_type: CompressionSubTy
 
     if compression_sub_type == CompressionSubType.ZLIB:
         try:
-            compressed_data = zlib.compress(input_data, zlib.Z_BEST_COMPRESSION)
+            compressed_data: bytes = zlib.compress(input_data, zlib.Z_BEST_COMPRESSION)
         except zlib.error as err:
             LOGGER.error(f"Compression of input buffer using ZLIB algorithm has failed with error: {err}")
             return bytes(input_data), False
@@ -250,8 +250,7 @@ def compress_zlib(input_data: memoryview, compression_sub_type: CompressionSubTy
     else:
         try:
             deflate_compressor = zlib.compressobj(zlib.Z_BEST_COMPRESSION)
-            compressed_data = bytearray(deflate_compressor.compress(input_data))
-            compressed_data.extend(deflate_compressor.flush())
+            compressed_data = deflate_compressor.compress(input_data) + deflate_compressor.flush()
         except zlib.error as err:
             LOGGER.error(f"Compression of input buffer using ZLIB algorithm has failed with error: {err}")
             return bytes(input_data), False
