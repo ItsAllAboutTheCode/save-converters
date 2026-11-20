@@ -1,6 +1,6 @@
 # Tales of Vesperia Save Converter
 Save Converter for Tales of Vesperia.  
-Supports PS3, PC.  
+Supports Conversion between PS3, PS4, PC and Nintendo Switch saves
 
 ## Usage
 Information on supported options can be found by running the following command from the root of the repo.
@@ -19,6 +19,22 @@ python save_converter.py tales-of-vesperia --convert-format=ps3-to-pc -i <path-t
 python save_converter.py tales-of-vesperia --convert-format=pc-to-ps3 -i <path-to-pc-save> -o <path-to-store-ps3-save>
 ```
 
+
+#### Convert NSW (Nintendo Switch) -> PC Vesperia Save
+```bash
+python save_converter.py tales-of-vesperia --convert-format=nsw-to-pc -i <path-to-nsw-save> -o <path-to-store-pc-save>
+```
+
+#### Convert PC -> NSW (Nintendo Switch) Vesperia Save
+```bash
+python save_converter.py tales-of-vesperia --convert-format=pc-to-nsw -i <path-to-pc-save> -o <path-to-store-nsw-save>
+```
+
+Example of PC to Switch conversion
+```bash
+python save_converter.py tales-of-vesperia --convert-format=pc-to-nsw -i "<Steam-folder>/userdata/<user-id>/738540/remote/TLSaveData0_12" -o "<SwitchRoot>/<SavePath>/TLSaveData0-00"
+```
+
 ---
 ### Note
 The save file header has been modified in minimal fashion as to make a round trip conversion PS3 <-> PC possible when the `--no-patch-dlc-item-checks` option is used.  
@@ -28,4 +44,6 @@ The [](./cheat_tables) folder also contains a cheat table for patching the DLC i
 This can be used in conjunction with the `--no-patch-dlc-item-checks` to allow a converted PS3 -> PC save that is round trip-able to be loaded on PC if it contains DLC.
 
 ## Credits
-AdmiralCurtiss [HyoutaTools](https://github.com/AdmiralCurtiss/HyoutaTools) repo - Used to learn about the save format as well as to get a list of Title IDs
+#### AdmiralCurtiss [HyoutaTools](https://github.com/AdmiralCurtiss/HyoutaTools) repo
+* Used to learn about the save format as well as to get a list of Title IDs
+* For the  implementation of the TLZC Compression / Decompression Algorithm
