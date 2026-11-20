@@ -55,7 +55,7 @@ class PatchStructEndianSwap(PatchBase):
     @override
     def __call__(
         self,
-        source_data: bytes,
+        source_data: memoryview,
         source_offset: int,
         _convert_format: ConvertFormat,
     ) -> PatchOperationResult:

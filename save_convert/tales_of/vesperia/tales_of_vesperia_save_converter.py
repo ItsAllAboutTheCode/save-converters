@@ -6,11 +6,22 @@ import logging
 import pathlib
 import struct
 import sys
+from io import BytesIO
 from typing import Any, cast, override
 
 from save_convert.save_converter_base import (
+    NSW_TO_PC_CONVERT_FORMAT,
+    NSW_TO_PS3_CONVERT_FORMAT,
+    NSW_TO_PS4_CONVERT_FORMAT,
+    PC_TO_NSW_CONVERT_FORMAT,
     PC_TO_PS3_CONVERT_FORMAT,
+    PC_TO_PS4_CONVERT_FORMAT,
+    PS3_TO_NSW_CONVERT_FORMAT,
     PS3_TO_PC_CONVERT_FORMAT,
+    PS3_TO_PS4_CONVERT_FORMAT,
+    PS4_TO_NSW_CONVERT_FORMAT,
+    PS4_TO_PC_CONVERT_FORMAT,
+    PS4_TO_PS3_CONVERT_FORMAT,
     ConvertFormat,
     ConvertPatchTable,
     EndianSwapSize,
@@ -26,6 +37,7 @@ from save_convert.save_converter_base import (
     SaveConvertBase,
     SaveFormat,
 )
+from save_convert.tales_of.tales_of_tlzc_compressor import CompressionType, tlzc_compress, tlzc_decompress
 from save_convert.tales_of.vesperia.tales_of_vesperia_title_id_list import (
     VESPERIA_PC_TITLE_IDS,
     VESPERIA_PS3_TITLE_IDS,
@@ -37,19 +49,103 @@ stdoutHandler = logging.StreamHandler()
 LOGGER.addHandler(stdoutHandler)
 
 
-SUPPORTED_CONVERT_FORMATS: list[ConvertFormat] = [PS3_TO_PC_CONVERT_FORMAT, PC_TO_PS3_CONVERT_FORMAT]
+SUPPORTED_CONVERT_FORMATS: list[ConvertFormat] = [
+    PS3_TO_PC_CONVERT_FORMAT,
+    PC_TO_PS3_CONVERT_FORMAT,
+    PS4_TO_PC_CONVERT_FORMAT,
+    PC_TO_PS4_CONVERT_FORMAT,
+    NSW_TO_PC_CONVERT_FORMAT,
+    PC_TO_NSW_CONVERT_FORMAT,
+    PS3_TO_PS4_CONVERT_FORMAT,
+    PS4_TO_PS3_CONVERT_FORMAT,
+    PS4_TO_NSW_CONVERT_FORMAT,
+    NSW_TO_PS4_CONVERT_FORMAT,
+    PS3_TO_NSW_CONVERT_FORMAT,
+    NSW_TO_PS3_CONVERT_FORMAT,
+]
 
+# Constant value that is set to the header used for a beginning of a game save for NSW / PS4 / PC platforms
+VESPERIA_DEF_EDIT_HEADER = bytes.fromhex(
+    "660000000000000018020000B0CA0C00"
+    "64000000530700002B68FF6A00000000"
+    "F4010000000000000B37303436380000"
+    "0D000E000F00FFFF1000110012001300"
+    "FFFF1400150016001700FFFF15001800"
+    "17001900FFFF1A001B001C001D00FFFF"
+    "1B001E001D001F000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "0000000000000000010000003E003F00"
+    "FFFF5300590054005A0055005B005600"
+    "00000000010000000500000015020000"
+    "1502000043000000430000000B323030"
+    "303000FF66006700680069006A006B00"
+    "6C006D006E006F007000710000000000"
+    "00000000000000000100000000000000"
+    "01000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "01000000000000000100000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000000000000100000000000000"
+    "01000000000000000000000000000000"
+    "00000000000000000000000000000000"
+    "0000000000000000"
+)
 
 VESPERIA_PS3_SAVE_SIZE = 552 + 838304  # 552 byte save header + 838204 byte save data block
-VESPERIA_PC_SAVE_SIZE = VESPERIA_PS3_SAVE_SIZE + 16  # The PC Save block is 16 bytes larger than PS3
+VESPERIA_DEFINITIVE_SAVE_SIZE = (
+    VESPERIA_PS3_SAVE_SIZE + 16
+)  # The Definitive Edition Save block is 16 bytes larger than PS3
 
 VESPERIA_SAVE_SIZE_DICT: dict[SaveFormat, int] = {
     SaveFormat.PS3: VESPERIA_PS3_SAVE_SIZE,
-    SaveFormat.PC: VESPERIA_PC_SAVE_SIZE,
+    SaveFormat.PC: VESPERIA_DEFINITIVE_SAVE_SIZE,
+    SaveFormat.NSW: VESPERIA_DEFINITIVE_SAVE_SIZE,
+    SaveFormat.PS4: VESPERIA_DEFINITIVE_SAVE_SIZE,
 }
 
 # PC files have an extra 16(0x10) bytes aftet the CUSTOM_DATA block
 VESPERIA_PS3_TO_PC_POST_CUSTOM_DATA_OFFSET = 0x10
+
+# The following offset appears to be be where the game checks if DLC items has been obtained
+# The assembly instructions for the check are:
+# ---
+# TOV_DE.exe+5BC4F7 - 43 8B 8C 84 F43D0000  - mov ecx,[r12+r8*4+00003DF4]
+# TOV_DE.exe+5BC4FF - 0FA3 D1               - bt ecx,edx
+# TOV_DE.exe+5BC502 - 73 2E                 - jae TOV_DE.exe+5BC532
+#
+# r12 = Start of the PARTY_DATA block from the save file (0xA3F48 PS3 / 0xA3F58 PC)
+# r8 = Can be between [0x31 - 0x3D] based on debugging DLC check routine of a converted PS3 save that triggered failure
+# The value of 0x31  appears to be where DLC items start at. It appears it is a bitfield of obtained items
+# So 0x31 (count) * 4 (bytes) * 8 ( bits per byte) = 0x620 = 1568 for the Item ID.
+# Looking through the item list for the games normal items the highest value is 1237, so it is guessed that this is
+# where the DLC items start
+#
+# Based on the number of 32-bit bitfields being check 0x31 thru 0x3D which is 52 bytes total,
+# plus the fact that these types of fields tend to be 16 byte aligned, the stride of this check offset will be assumed
+# to be 64 bytes(16 int sized bitfields)
+
+VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET = 0xA7E00
+VESPERIA_PC_DLC_ITEM_CHECK_OFFSET = VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET + VESPERIA_PS3_TO_PC_POST_CUSTOM_DATA_OFFSET
+VESPERIA_DLC_ITEM_CHECK_STRIDE = 64
+VESPERIA_DLC_ITEM_CHECK_OFFSET_DICT = {
+    SaveFormat.PS3: VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET,
+    SaveFormat.PC: VESPERIA_PC_DLC_ITEM_CHECK_OFFSET,
+    SaveFormat.NSW: VESPERIA_PC_DLC_ITEM_CHECK_OFFSET,
+    SaveFormat.PS4: VESPERIA_PC_DLC_ITEM_CHECK_OFFSET,
+}
+
 
 # Stores the range offset of all the custom character name offsets in the PS3 save file
 # Since the character names are strings, they should not be endian swapped
@@ -105,7 +201,7 @@ class PatchObtainedTitles(PatchCopyBytes):
     @override
     def __call__(
         self,
-        source_data: bytes,
+        source_data: memoryview,
         source_offset: int,
         convert_format: ConvertFormat,
     ) -> PatchOperationResult:
@@ -200,32 +296,6 @@ VESPERIA_CHARACTER_OBTAINED_TITLE_OFFSET_RANGES = (
     for index in range(VESPERIA_NUM_CHARACTERS)
 )
 
-# The following offset appears to be be where the game checks if DLC items has been obtained
-# The assembly instructions for the check are:
-# ---
-# TOV_DE.exe+5BC4F7 - 43 8B 8C 84 F43D0000  - mov ecx,[r12+r8*4+00003DF4]
-# TOV_DE.exe+5BC4FF - 0FA3 D1               - bt ecx,edx
-# TOV_DE.exe+5BC502 - 73 2E                 - jae TOV_DE.exe+5BC532
-#
-# r12 = Start of the PARTY_DATA block from the save file (0xA3F48 PS3 / 0xA3F58 PC)
-# r8 = Can be between [0x31 - 0x3D] based on debugging DLC check routine of a converted PS3 save that triggered failure
-# The value of 0x31  appears to be where DLC items start at. It appears it is a bitfield of obtained items
-# So 0x31 (count) * 4 (bytes) * 8 ( bits per byte) = 0x620 = 1568 for the Item ID.
-# Looking through the item list for the games normal items the highest value is 1237, so it is guessed that this is
-# where the DLC items start
-#
-# Based on the number of 32-bit bitfields being check 0x31 thru 0x3D which is 52 bytes total,
-# plus the fact that these types of fields tend to be 16 byte aligned, the stride of this check offset will be assumed
-# to be 64 bytes(16 int sized bitfields)
-
-VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET = 0xA7E00
-VESPERIA_PC_DLC_ITEM_CHECK_OFFSET = VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET + VESPERIA_PS3_TO_PC_POST_CUSTOM_DATA_OFFSET
-VESPERIA_DLC_ITEM_CHECK_STRIDE = 64
-VESPERIA_DLC_ITEM_CHECK_OFFSET_DICT = {
-    SaveFormat.PS3: VESPERIA_PS3_DLC_ITEM_CHECK_OFFSET,
-    SaveFormat.PC: VESPERIA_PC_DLC_ITEM_CHECK_OFFSET,
-}
-
 
 class SaveConvertVesperia(SaveConvertBase):
     _patch_dlc_checks: bool
@@ -236,7 +306,21 @@ class SaveConvertVesperia(SaveConvertBase):
 
     @override
     def _pre_transform(self) -> bool:
-        return super()._pre_transform()
+        if not super()._pre_transform():
+            return False
+
+        # If the source format is NSW, then attempt to decompress the save
+        if self._convert_format.source == SaveFormat.NSW:
+            # Attempt to decompress the switch save data after skipping over the 0x228 header
+            header_view = memoryview(self._input_data)[: len(VESPERIA_DEF_EDIT_HEADER)]
+            compressed_view = memoryview(self._input_data)[len(VESPERIA_DEF_EDIT_HEADER) :]
+            decompressed_data, result = tlzc_decompress(compressed_view)
+            # Even if decompression fails, still attempt to convert the save
+            # (perhaps the stave was decompressed from another tool)
+            if result:
+                self._input_data = bytes(header_view) + decompressed_data
+
+        return True
 
     @override
     def _transform(self) -> bool:
@@ -244,6 +328,32 @@ class SaveConvertVesperia(SaveConvertBase):
 
     @override
     def _post_transform(self) -> bool:
+        if self._patch_dlc_checks and (
+            dlc_check_start := VESPERIA_DLC_ITEM_CHECK_OFFSET_DICT.get(self._convert_format.target)
+        ):
+            # Patch the bytes starting at the DLC_ITEM check offset with 64 zeros
+            byte_view = self._output_io.getbuffer()
+            byte_view[dlc_check_start : dlc_check_start + VESPERIA_DLC_ITEM_CHECK_STRIDE] = bytes(
+                VESPERIA_DLC_ITEM_CHECK_STRIDE
+            )
+            byte_view.release()
+
+        # Compress save file if target convert format is NSW
+        if self._convert_format.target == SaveFormat.NSW:
+            byte_view = self._output_io.getbuffer()
+            header_view = byte_view[: len(VESPERIA_DEF_EDIT_HEADER)]
+            decompressed_view = byte_view[len(VESPERIA_DEF_EDIT_HEADER) :]
+            compressed_data, result = tlzc_compress(decompressed_view, CompressionType.LZMA)
+            full_compressed_data = bytes(header_view) + compressed_data
+            decompressed_view.release()
+            header_view.release()
+            byte_view.release()  # Allow the BytesIO object to be closed
+
+            if not result:
+                return False
+            # Replace the output data with compressed data
+            self._output_io = BytesIO(full_compressed_data)
+
         return super()._post_transform()
 
     @override
@@ -492,21 +602,6 @@ class SaveConvertVesperia(SaveConvertBase):
         )
         # END Replace Offset Table populate
 
-        # Fill the Replace table for each uncovered offset range in the patch table
-        # The mapping functor will perform a direct copy of the save data from the input file to the output file.
-        for convert_patch_table_key, patch_set in new_patch_table.convert_format_to_patch_set.items():
-            ## Add the dlc item check patch range entry
-            if self._patch_dlc_checks:
-                dlc_check_start = VESPERIA_DLC_ITEM_CHECK_OFFSET_DICT.get(convert_patch_table_key.source, sys.maxsize)
-                # Patch the bytes starting at the DLC_ITEM check offset with 64 zeros
-                patch_set.add_patch_entry(
-                    PatchInsertAndSkipBytes(
-                        target_offset=dlc_check_start + VESPERIA_PS3_TO_PC_POST_CUSTOM_DATA_OFFSET,
-                        source_offset=dlc_check_start,
-                        output_bytes=bytes(VESPERIA_DLC_ITEM_CHECK_STRIDE),
-                    )
-                )
-
         # Generate the reverse mmapping
         new_patch_table.convert_format_to_patch_set[PC_TO_PS3_CONVERT_FORMAT] = (
             new_patch_table.convert_format_to_patch_set[PS3_TO_PC_CONVERT_FORMAT].generate_reverse_set()
@@ -519,6 +614,21 @@ class SaveConvertVesperia(SaveConvertBase):
         valid, error_messages = new_patch_table.validate()
         if not valid:
             raise RangeNotCoveredException("\n".join(error_messages))
+
+        # Assuming the PS4 and NSW is the same format as PC
+        # So the mappings will be reused for both
+        new_patch_table.convert_format_to_patch_set[PS4_TO_PS3_CONVERT_FORMAT] = (
+            new_patch_table.convert_format_to_patch_set[PC_TO_PS3_CONVERT_FORMAT]
+        )
+        new_patch_table.convert_format_to_patch_set[NSW_TO_PS3_CONVERT_FORMAT] = (
+            new_patch_table.convert_format_to_patch_set[PC_TO_PS3_CONVERT_FORMAT]
+        )
+        new_patch_table.convert_format_to_patch_set[PS3_TO_PS4_CONVERT_FORMAT] = (
+            new_patch_table.convert_format_to_patch_set[PS3_TO_PC_CONVERT_FORMAT]
+        )
+        new_patch_table.convert_format_to_patch_set[PS3_TO_NSW_CONVERT_FORMAT] = (
+            new_patch_table.convert_format_to_patch_set[PS3_TO_PC_CONVERT_FORMAT]
+        )
 
         return new_patch_table
 
@@ -572,9 +682,8 @@ def add_commands(parser: argparse.ArgumentParser) -> None:
         "-f",
         action=ConvertFormatAction,
         choices=[str(format) for format in SUPPORTED_CONVERT_FORMATS],
-        default=PS3_TO_PC_CONVERT_FORMAT,
         help="Specifies the input file save format and what should the output file format should be."
-        " Only PS3 and PC supported at this time",
+        " Supports PS3, PS4, Switch and PC saves",
     )
 
     _ = parser.add_argument(

@@ -330,7 +330,7 @@ class SaveConvertGracesFEncrypted(SaveConvertBase):
 
         # Apply the save patch for conversion to/from PS3 data
         converted_data = self.apply_patch(
-            self._save_contents.raw_save_binary_buffer, self._patch_table, self._convert_format
+            memoryview(self._save_contents.raw_save_binary_buffer), self._patch_table, self._convert_format
         )
         if not converted_data:
             LOGGER.error(f"Failed to convert data save data using the convert format of {self._convert_format}")

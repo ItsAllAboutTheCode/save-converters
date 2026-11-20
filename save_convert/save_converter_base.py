@@ -258,7 +258,9 @@ class PatchBase(ABC):
         self._source_range = source_range
 
     @abstractmethod
-    def __call__(self, source_data: bytes, source_offset: int, convert_format: ConvertFormat) -> PatchOperationResult:
+    def __call__(
+        self, source_data: memoryview, source_offset: int, convert_format: ConvertFormat
+    ) -> PatchOperationResult:
         """
         Invoked to get a list of bytes to copy to the target stream at a specific target
         + update the source stream read offset.
@@ -331,7 +333,9 @@ class PatchCopyBytes(PatchBase):
     """
 
     @override
-    def __call__(self, source_data: bytes, source_offset: int, _convert_format: ConvertFormat) -> PatchOperationResult:
+    def __call__(
+        self, source_data: memoryview, source_offset: int, _convert_format: ConvertFormat
+    ) -> PatchOperationResult:
         """Copies all the bytes from source_offset in the source_data
         to the target offset
         This is the default passthrough function for copying output from the source_data without modification
@@ -347,7 +351,7 @@ class PatchCopyBytes(PatchBase):
         # Make sure that the source_data buffer is not indexed passed its end
         new_end_offset = min(len(source_data), self._source_range.end)
         return PatchOperationResult(
-            target_data=source_data[source_offset:new_end_offset],
+            target_data=bytes(source_data[source_offset:new_end_offset]),
             target_write_offset=self._target_offset,
             new_source_offset=source_offset + (new_end_offset - source_offset),
             patch_complete=PatchOperationState.Complete,
@@ -382,7 +386,7 @@ class PatchInsertBytes(PatchBase):
     @override
     def __call__(
         self,
-        _source_data: bytes,
+        _source_data: memoryview,
         source_offset: int,
         _convert_format: ConvertFormat,
     ) -> PatchOperationResult:
@@ -436,7 +440,7 @@ class PatchSkipBytes(PatchBase):
     @override
     def __call__(
         self,
-        _source_data: bytes,
+        _source_data: memoryview,
         source_offset: int,
         _convert_format: ConvertFormat,
     ) -> PatchOperationResult:
@@ -507,7 +511,7 @@ class PatchInsertAndSkipBytes(PatchBase):
     @override
     def __call__(
         self,
-        _source_data: bytes,
+        _source_data: memoryview,
         source_offset: int,
         _convert_format: ConvertFormat,
     ) -> PatchOperationResult:
@@ -569,7 +573,7 @@ class PatchEndianSwap(PatchCopyBytes):
     @override
     def __call__(
         self,
-        source_data: bytes,
+        source_data: memoryview,
         source_offset: int,
         _convert_format: ConvertFormat,
     ) -> PatchOperationResult:
@@ -983,7 +987,7 @@ class SaveTransformBase(SaveBase, ABC):
     @staticmethod
     def process_input_savedata(
         input_result: PatchOperationResult,
-        source_data: bytes,
+        source_data: memoryview,
         patch_set: PatchSet,
         current_patch_index: int,
         convert_format: ConvertFormat,
@@ -1043,7 +1047,7 @@ class SaveConvertBase(SaveTransformBase, ABC):
         """Iterates over the input save file, attempting byte replacements from the source save format
         in order to convert to the target save format
         """
-        if output_data := self.apply_patch(self._input_data, self._patch_table, self._convert_format):
+        if output_data := self.apply_patch(memoryview(self._input_data), self._patch_table, self._convert_format):
             try:
                 if self._output_io.write(output_data) != len(output_data):
                     LOGGER.error(
@@ -1063,10 +1067,16 @@ class SaveConvertBase(SaveTransformBase, ABC):
         return ConvertPatchTable(convert_format_to_patch_set={}, save_format_to_save_size_dict={})
 
     @staticmethod
-    def apply_patch(input_data: bytes, patch_table: ConvertPatchTable, convert_format: ConvertFormat) -> bytes:
-        """Patches the input buffer using the patch table and returns a bytes object"""
+    def apply_patch(input_data: memoryview, patch_table: ConvertPatchTable, convert_format: ConvertFormat) -> bytes:
+        """Patches the input buffer using the patch table and returns a bytes object
+        If there is no entries in the patch set, the input buffer is copied without modification
+        """
 
         convert_patch_set: PatchSet = patch_table.get_patch_set_for_convert_format(convert_format)
+        if not convert_patch_set.patch_entries:
+            # No patch table entries, so make a copy of the input data
+            return bytes(input_data)
+
         target_save_size = patch_table.get_save_size_for_format(convert_format.target)
         if not target_save_size:
             LOGGER.error(

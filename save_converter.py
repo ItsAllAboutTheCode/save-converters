@@ -61,7 +61,7 @@ def main():
         parser.print_help(sys.stderr)
         response = False
 
-    sys.exit(0 if response else 1)
+    return response
 
 
 if __name__ == "__main__":
